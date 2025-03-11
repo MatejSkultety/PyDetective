@@ -4,6 +4,7 @@ import time
 
 print("PyDetective started!")
 client = docker.from_env()
+sysdig_image = client.images.pull("sysdig/sysdig")
 sysdig_container = client.containers.run(
     "sysdig/sysdig",
     stdin_open=True,
@@ -11,6 +12,7 @@ sysdig_container = client.containers.run(
     detach=True,
 )
 print("PyDetective debug: Sysdig container started")
+tcpdump_image = client.images.pull("tcpdump")
 tcpdump_container = client.containers.run(
     "tcpdump",
     stdin_open=True,
