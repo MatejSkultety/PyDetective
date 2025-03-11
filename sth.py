@@ -1,16 +1,31 @@
+import docker
 import subprocess
 import time
 import json
 
-def start_docker_container(image_name):
-    """Start a Docker container and return its container ID."""
-    result = subprocess.run(["docker", "run", "-d", image_name], capture_output=True, text=True)
-    container_id = result.stdout.strip()
-    print(f"Started container {container_id} from image {image_name}.")
-    return container_id
+
+def run_docker_container(client, image_name):
+    """
+    Start a Docker container with the specified image.
+    
+    """
+
+    client.images.pull(image_name)
+    container = client.containers.run(
+        image_name,
+        stdin_open=True,
+        tty=True,
+        detach=True,
+    )
+    print(f"PyDetective debug: Container {container.id} started.")
+    return container.id
+
 
 def capture_syscalls(container_id, duration=10, output_file=None, filter_events=None):
-    """Capture system calls for a specific Docker container using Sysdig."""
+    """
+    Capture system calls for a specific Docker container using Sysdig.
+    
+    """
     
     # Construct sysdig filter
     filter_expression = f"container.id={container_id}"
@@ -33,22 +48,30 @@ def capture_syscalls(container_id, duration=10, output_file=None, filter_events=
     process.terminate()
     print(f"Sysdig capture completed for container {container_id}.")
 
-def stop_docker_container(container_id):
-    """Stop and remove the Docker container."""
-    subprocess.run(["docker", "stop", container_id], capture_output=True, text=True)
-    subprocess.run(["docker", "rm", container_id], capture_output=True, text=True)
-    print(f"Stopped and removed container {container_id}.")
 
 if __name__ == "__main__":
-    image_name = input("Enter the Docker image name to start: ")
-    container_id = start_docker_container(image_name)
+    print("PyDetective started!")
+    client = docker.from_env()
+    sysdig_container = run_docker_container(client, "sysdig/sysdig")
+    tcpdump_container = run_docker_container(client, "tcpdump")
+
+    sandbox_container = client.containers.create(
+        "pandas_test",
+        stdin_open=True,
+        tty=True,
+        detach=True,
+    )
     
     duration = int(input("Enter capture duration (seconds): ") or 10)
-    output_file = input("Enter output file name (or leave blank for real-time output): ") or None
     
     # Example filter: capturing only 'open' and 'write' system calls
-    filter_events = ["open", "write"]
+    # filter_events = ["open", "write"]
     
-    capture_syscalls(container_id, duration, output_file, filter_events)
+    capture_syscalls(sandbox_container.id, duration)
     
-    stop_docker_container(container_id)
+    sandbox_container.start()
+
+    time.sleep(1)
+    for container in client.containers.list():
+        container.stop()
+    print("Good bye, PyDetective!")
