@@ -1,4 +1,7 @@
 import docker
+import tarfile
+import io
+import os
 
 def createImage(client: docker.client) -> docker.models.images.Image:
     """
@@ -35,6 +38,8 @@ def createContainer(client: docker.client, requirements: str) -> docker.models.c
         docker.models.containers.Container: The created Docker container.
     """
     cmd = ["pip", "install", "--no-cache-dir", requirements]
+    #cmd = ["sh", "-c", f"pip install --no-cache-dir {requirements}"]
+    #cmd = ["sh", "-c", f"tcpdump udp"]
     print("PyDetective debug: Creating sandbox container with command: ", cmd)
     sandbox_container = client.containers.create(
         "pydetective_sandbox_container",
@@ -75,11 +80,30 @@ def logContainer(sandbox_container: docker.models.containers.Container, path: st
     Returns:
         None
     """
-    logs = sandbox_container.attach(stdout=True, stderr=True, stream=True)
+    logs = sandbox_container.logs()
     if path:
         with open(path, "w") as log_file:
-            for log in logs:
-                log_file.write(log.decode('utf-8'))
+            log_file.write(logs.decode("utf-8"))
     else:
-        for log in logs:
-            print(log.decode('utf-8'))
+        print(logs.decode("utf-8"))
+
+
+def get_container_files(container: docker.models.containers.Container, src: str, target: str) -> None:
+    """
+    Download a file from a Docker container to the host machine.
+
+    Args:
+        container (docker.models.containers.Container): The Docker container instance.
+        
+
+    Returns:
+        None
+    """
+    with open(target, "w") as trg_file:
+        archive_stream, stat = container.get_archive(src)
+        tar_data = b''.join(archive_stream)
+        with tarfile.open(fileobj=io.BytesIO(tar_data), mode="r|*") as tar:
+            for member in tar:
+                with tar.extractfile(member) as src_file:
+                    trg_file.write(src_file.read().decode('utf-8'))
+    print(f"PyDetective debug: File {src} downloaded from container {container.id}")
