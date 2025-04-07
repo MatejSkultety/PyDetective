@@ -81,7 +81,7 @@ from src.utils import helpers
 # print("Good bye, PyDetective!")
 
 
-
+#"""
 
 print("PyDetective started!")
 client = docker.from_env()
@@ -92,7 +92,7 @@ sandbox.runContainer(sandbox_container)
 sandbox_container.pause()
 
 # sysdig_container = sysdig.create_container(client, sandbox_container)
-# subprocess.Popen(sysdig.create_command(sandbox_container, "out/sysdig_output.json"), shell=True)
+subprocess.Popen(sysdig.create_command(sandbox_container, "out/sysdig_output.json"), shell=True)
 tcpdump_container = tcpdump.create_container(client, sandbox_container, "test.pcap")
 
 sandbox_container.unpause()
@@ -110,4 +110,7 @@ for container in client.containers.list():
     container.remove(force=True)
 
 print(parser.parse_network_artefacts("out/tcpdump_output.pcap"))
-# print(parser.parse_network_artefacts("valid_tcpdump.pcap"))
+#"""
+
+# test_result = parser.parse_syscalls_artefacts("tmp/sysdig_test_stdout.json")
+# print(test_result)

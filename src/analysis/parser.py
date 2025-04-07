@@ -1,4 +1,6 @@
 import pyshark
+import json
+import re
 
 def parse_network_artefacts(pcap_file):
     ip_addresses = set()  # To store unique IPs
@@ -44,22 +46,63 @@ def parse_network_artefacts(pcap_file):
             if len(domain_parts) > 1:
                 host = '.'.join(domain_parts[-2:])  # Get last two parts
                 hosts.add(host)
+    cap.close()
 
     return ip_addresses, domain_names, hosts
 
 
-# Example usage
-pcap_file = 'valid_tcpdump.pcap'  # Replace with your .pcap file
-ips, domains, hosts = parse_network_artefacts(pcap_file)
+def parse_syscalls_artefacts(json_file):
+    """
+    Extracts unique file operations from a JSONL file containing Sysdig output.
 
-print(f"Unique IP addresses in {pcap_file}:")
-for ip in ips:
-    print(ip)
+    Args:
+        file_path (str): Path to the JSONL file.
 
-print(f"\nUnique domain names in {pcap_file}:")
-for domain in domains:
-    print(domain)
+    Returns:
+        list: A list of dictionaries, each representing a unique file operation with keys 'operation', 'filename', and 'flag'.
+    """
+    # Define a set to store unique file operations
+    unique_operations = set()
 
-print(f"\nUnique hosts in {pcap_file}:")
-for host in hosts:
-    print(host)
+    # Define a regular expression pattern to extract file operations
+    # This pattern looks for key-value pairs in the format key=value
+    pattern = re.compile(r'(\w+)=([^\s]+)')
+
+    # Open the JSONL file and process it line by line
+    with open(json_file, 'r') as file:
+        print("PyDetective debug: Parsing syscalls artefacts")
+        for line in file:
+            # Parse the JSON object from the current line
+            try:
+                log_entry = json.loads(line)
+            except json.JSONDecodeError:
+                # Skip lines that are not valid JSON
+                continue
+
+            # Extract the 'evt.info' field
+            evt_info = log_entry.get('evt.info', '')
+            print(evt_info)
+            # Parse key-value pairs from 'evt.info'
+            parsed_info = dict(pattern.findall(evt_info))
+
+            # Check if the parsed info contains file operation details
+            if 'res' in parsed_info and 'data' in parsed_info:
+                # Extract operation, filename, and flag
+                operation = parsed_info.get('operation', '').lower()
+                filename = parsed_info.get('filename', '')
+                flag = parsed_info.get('flag', '')
+
+                # Only consider entries with a valid filename
+                if filename:
+                    # Create a tuple representing the file operation
+                    file_operation = (operation, filename, flag)
+                    # Add the tuple to the set to ensure uniqueness
+                    unique_operations.add(file_operation)
+
+    # Convert the set of tuples back to a list of dictionaries
+    file_operations_list = [
+        {'operation': op, 'filename': fn, 'flag': fl}
+        for op, fn, fl in unique_operations
+    ]
+
+    return file_operations_list

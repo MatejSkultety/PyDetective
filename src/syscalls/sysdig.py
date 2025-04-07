@@ -3,8 +3,7 @@ import docker
 
 def create_command(sandbox: docker.models.containers.Container,exportFile: str) -> list:
 
-    command = [f"sudo sysdig -j -pc container.name={sandbox.name} -p'%proc.cwd %proc.cmdline %proc.name %proc.args %proc.duration %user.uid %evt.info' > {exportFile}"]
-    #command = ["sysdig", "-j", "container.name=pydetective_sandbox_container"]
+    command = [f"sudo sysdig -j -pc container.name={sandbox.name} and evt.type!=newfstatat -p'%proc.name %proc.cmdline %proc.args %evt.type %evt.info %evt.arg.flags %fd.name' > {exportFile}"]
     print(f"PyDetective debug: Sysdig command: {command}")
     return command
 
