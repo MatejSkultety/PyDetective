@@ -2,33 +2,41 @@ import docker
 import docker.models
 
 
-def createCommand(exportFile: str, ignoredHosts: str = None) -> list:
+def create_command(export_file: str, ignored_hosts: str = None) -> list:
     """
     Create a command to run tcpdump with the specified parameters.
     
     Args:
-        exportFile (str): The path to the file where the tcpdump output will be saved.
-        ignoredHosts (str, optional): A comma-separated list of IP addresses to ignore. Defaults to None.
-    
+        export_file (str): The path to the file where the tcpdump output will be saved.
+        ignored_hosts (str, optional): A comma-separated list of IP addresses to ignore. Defaults to None.
+
     Returns:
         str: The command to run tcpdump.
     """
-    ##command = f"tcpdump -i docker0 udp -w {exportFile}"
-    command = ["tcpdump", "-N", "-t", "-w", "tcpdump_output.pcap"]
-    # command = ["sh", "-c", "tcpdump -N -t > tcpdump_output.log"]
-    if ignoredHosts:
-        ignoredHostsList = ignoredHosts.split(",")
-        for host in ignoredHostsList:
+    command = ["tcpdump", "-N", "-t", "-w", export_file]
+    # TODO ignored hosts
+    if ignored_hosts:
+        ignored_hosts_list = ignored_hosts.split(",")
+        for host in ignored_hosts_list:
             command += f" and not host {host}"
     print(f"PyDetective debug: Tcpdump command: {command}")
     return command
 
 
-def create_container(client: docker.client, sandbox: docker.models.containers.Container,exportFile: str, ignoredHosts: str = None):
+def run_container(client: docker.client, sandbox: docker.models.containers.Container, export_file: str, ignored_hosts: str = None):
     """
+    Run a Docker container for tcpdump with the specified parameters.
 
+    Args:
+        client (docker.client): The Docker client instance.
+        sandbox (docker.models.containers.Container): The sandbox container instance.
+        export_file (str): The path to the file where the tcpdump output will be saved.
+        ignored_hosts (str, optional): A comma-separated list of IP addresses to ignore. Defaults to None.
+
+    Returns:
+        docker.models.containers.Container: The created tcpdump container.
     """
-    command = createCommand(exportFile, ignoredHosts)
+    command = create_command(export_file, ignored_hosts)
     tcpdump_container = client.containers.run(
         image="tcpdump",
         command=command,
