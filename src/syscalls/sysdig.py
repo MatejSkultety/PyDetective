@@ -1,5 +1,5 @@
 import docker
-
+import subprocess
 
 def create_command(sandbox: docker.models.containers.Container, export_file: str) -> list[str]:
     """
@@ -17,26 +17,18 @@ def create_command(sandbox: docker.models.containers.Container, export_file: str
     return command
 
 
-def create_container(client: docker.client, sandbox: docker.models.containers.Container, export_file: str) -> docker.models.containers.Container:
+def run_process(sandbox: docker.models.containers.Container, export_file: str) -> subprocess.Popen:
     """
-    Create a Docker container for running sysdig.
-    
+    Create sysdig command and run it in a subprocess.
+
     Args:
-        client (docker.client): The Docker client instance.
-        sandbox (docker.models.containers.Container): The sandbox container instance.
+        sandbox (docker.models.containers.Container): Sandbox container instance to inspect.
         export_file (str): The file path to export the sysdig output.
 
     Returns:
-        docker.models.containers.Container: The created sysdig container.
+        subprocess.Popen: The process object for the running sysdig command.
     """
     command = create_command(sandbox, export_file)
-    sysdig_container = client.containers.run(
-        "sysdig/sysdig",
-        command=command,
-        network_mode=f"container:{sandbox.id}",
-        stdin_open=True,
-        tty=True,
-        detach=True,
-    )
-    print("PyDetective debug: Sysdig container created: ID: ", sysdig_container.id)
-    return sysdig_container
+    process = subprocess.Popen(command, shell=True)
+
+    return process
