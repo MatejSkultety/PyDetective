@@ -1,14 +1,15 @@
 import pyshark
 import json
 
-
-def parse_network_artefacts(pcap_file: str) -> tuple[set, set, set]:
+def parse_network_artefacts(pcap_file: str, ignored_hosts: list[str] = None, ignored_ips: list[str] = None) -> tuple[set, set, set]:
     """
     Extracts unique IP addresses, domain names, and hosts from a pcap file.
     It uses the pyshark library to read the pcap file and extract relevant information.
 
     Args:
         pcap_file (str): Path to the pcap file.
+        ignored_hosts (list[str], optional): List of hosts to ignore. Defaults to None.
+        ignored_ips (list[str], optional): List of IP addresses to ignore. Defaults to None.
 
     Returns:
         tuple: A tuple containing three sets:
@@ -25,8 +26,10 @@ def parse_network_artefacts(pcap_file: str) -> tuple[set, set, set]:
         if 'IP' in packet:
             src_ip = packet.ip.src
             dst_ip = packet.ip.dst
-            ip_addresses.add(src_ip)
-            ip_addresses.add(dst_ip)
+            if ignored_ips and not (src_ip in ignored_ips):
+                ip_addresses.add(src_ip)
+            if ignored_ips and not (dst_ip in ignored_ips):
+                ip_addresses.add(dst_ip)
         if 'DNS' in packet:
             if hasattr(packet.dns, 'qry_name'):
                 domain_names.add(packet.dns.qry_name)
@@ -41,7 +44,8 @@ def parse_network_artefacts(pcap_file: str) -> tuple[set, set, set]:
             domain_parts = domain.split('.')
             if len(domain_parts) > 1:
                 host = '.'.join(domain_parts[-2:])  # Get last two parts
-                hosts.add(host)
+                if ignored_hosts and not (host in ignored_hosts):
+                    hosts.add(host)
     cap.close()
     return ip_addresses, domain_names, hosts
 
@@ -58,6 +62,9 @@ def parse_syscalls_artefacts(json_path: str) -> list:
               'operation', 'filename', and 'flag'.
     """
     unique_operations = set()
+    operations = set()
+    files = set()
+    flags = set()
     # JSONL file needs to be processed line by line
     with open(json_path, 'r') as file:
         for line in file:
@@ -68,6 +75,9 @@ def parse_syscalls_artefacts(json_path: str) -> list:
                 flag = syscall.get("evt.arg.flags")
                 operation_tuple = (event_type, filename, flag)
                 unique_operations.add(operation_tuple)
+                operations.add(event_type)
+                files.add(filename)
+                flags.add(flag)
             except json.JSONDecodeError:
                 # Handle JSON parsing errors (e.g., malformed lines)
                 continue
@@ -76,4 +86,10 @@ def parse_syscalls_artefacts(json_path: str) -> list:
         {'operation': op, 'filename': fn, 'flag': fl}
         for op, fn, fl in unique_operations
     ]
+
+    
+    print(files)
+    print(operations)
+    print(flags)
+
     return file_operations_list
