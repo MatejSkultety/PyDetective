@@ -1,6 +1,7 @@
 import docker
 import subprocess
 
+
 def create_command(sandbox: docker.models.containers.Container, export_file: str, filters: list[str]) -> list[str]:
     """
     Create the sysdig command inspecting syscalls of sandbox container.
@@ -15,11 +16,13 @@ def create_command(sandbox: docker.models.containers.Container, export_file: str
     """
     if len(filters) == 0:
         filter_string = ""
-
     else:
         filter_string = "and " + " and ".join(filters) + " "
-    command = [f"sudo sysdig -j -pc container.name={sandbox.name} {filter_string}-p'%proc.name %proc.cmdline %proc.args %evt.type %evt.info %evt.arg.flags %fd.name' > {export_file}"]
+
+    output_format = "%proc.name %proc.cmdline %proc.args %evt.type %evt.info %evt.arg.flags %fd.name"
+    command = [f"sudo sysdig -j -pc container.name={sandbox.name} {filter_string}-p'{output_format}' > {export_file}"]
     print(f"PyDetective debug: Sysdig command: {command}")
+
     return command
 
 

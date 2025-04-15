@@ -1,7 +1,4 @@
 import docker
-import tarfile
-import io
-import os
 
 
 def build_image(client: docker.client) -> docker.models.images.Image:

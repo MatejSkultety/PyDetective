@@ -1,6 +1,7 @@
 import pyshark
 import json
 
+
 def parse_network_artefacts(pcap_file: str, ignored_hosts: list[str] = None, ignored_ips: list[str] = None) -> tuple[set, set, set]:
     """
     Extracts unique IP addresses, domain names, and hosts from a pcap file.
@@ -86,10 +87,5 @@ def parse_syscalls_artefacts(json_path: str) -> list:
         {'operation': op, 'filename': fn, 'flag': fl}
         for op, fn, fl in unique_operations
     ]
-
-    
-    print(files)
-    print(operations)
-    print(flags)
 
     return file_operations_list
