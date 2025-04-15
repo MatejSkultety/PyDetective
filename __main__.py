@@ -2,7 +2,7 @@ import os
 import argparse
 import sys
 
-import __main__old
+from src import runner
 
 def arg_formatter():
     def formatter(prog): return argparse.HelpFormatter(
@@ -16,6 +16,9 @@ def parse_args():
 
     parser.add_argument('-t', '--test', action='store_true',
                         help='test the script')
+    
+    parser.add_argument('-p', '--package', action='store_true',
+                        help='install safe package')
 
     return parser.parse_args(args=None if sys.argv[1:] else ['--help'])
 
@@ -27,7 +30,11 @@ def main():
     print('-' * terminal_size.columns)
 
     if args.test:
-        __main__old.main()
+        runner.install_in_sandbox("progress")
+        print('-' * terminal_size.columns)
+
+    if args.package:
+        runner.install_in_sandbox("progress")
         print('-' * terminal_size.columns)
 
 

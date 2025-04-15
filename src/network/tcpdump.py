@@ -17,7 +17,7 @@ def create_command(export_file: str) -> list:
     return command
 
 
-def run_container(client: docker.client, sandbox: docker.models.containers.Container, export_file: str, ignored_hosts: str = None):
+def run_container(client: docker.client, sandbox: docker.models.containers.Container, export_file: str):
     """
     Run a Docker container for tcpdump with the specified parameters.
 
@@ -30,7 +30,7 @@ def run_container(client: docker.client, sandbox: docker.models.containers.Conta
     Returns:
         docker.models.containers.Container: The created tcpdump container.
     """
-    command = create_command(export_file, ignored_hosts)
+    command = create_command(export_file)
     tcpdump_container = client.containers.run(
         image="tcpdump",
         command=command,

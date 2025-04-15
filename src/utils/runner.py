@@ -8,14 +8,14 @@ from src.analysis import parser
 from src.utils import helpers
 
 
-def install_in_sandbox(requirements: str, network_scan: bool = True, syscalls_scan: bool = True) -> None:
+def install_in_sandbox(requirements: str, network_scan: bool = True, syscalls_scan: bool = True, network_filters: list[str] = None, syscalls_filters: list[str] = None, complete_scan = False) -> None:
 
 
 
     client = docker.from_env()
 
     sandbox.createImage(client)
-    sandbox_container = sandbox.createContainer(client, "progress")
+    sandbox_container = sandbox.createContainer(client, requirements)
     # TODO don't run and pause, stry to run it paused
     sandbox.runContainer(sandbox_container)
     sandbox_container.pause()
