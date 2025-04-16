@@ -17,8 +17,8 @@ def parse_args():
     parser.add_argument('-t', '--test', action='store_true',
                         help='test the script')
     
-    parser.add_argument('-p', '--package', action='store_true',
-                        help='install safe package')
+    parser.add_argument('-l', '--local', action='store_true',
+                        help='install local package')
 
     return parser.parse_args(args=None if sys.argv[1:] else ['--help'])
 
@@ -33,8 +33,8 @@ def main():
         runner.install_in_sandbox("progress")
         print('-' * terminal_size.columns)
 
-    if args.package:
-        runner.install_in_sandbox("progress")
+    if args.local:
+        runner.install_in_sandbox("purposefully-malicious")
         print('-' * terminal_size.columns)
 
 
