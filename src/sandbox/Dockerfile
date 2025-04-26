@@ -12,3 +12,7 @@
 #     curl 
 
 FROM python:3.12-slim
+
+WORKDIR /app
+
+COPY sample_package_skuty /app/sample_package_skuty

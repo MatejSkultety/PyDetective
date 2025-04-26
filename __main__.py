@@ -2,7 +2,7 @@ import os
 import argparse
 import sys
 
-from src import runner
+from src.utils import runner
 
 def arg_formatter():
     def formatter(prog): return argparse.HelpFormatter(
@@ -30,11 +30,11 @@ def main():
     print('-' * terminal_size.columns)
 
     if args.test:
-        runner.install_in_sandbox("progress")
+        runner.install_in_sandbox("purposefully-malicious")
         print('-' * terminal_size.columns)
 
     if args.local:
-        runner.install_in_sandbox("purposefully-malicious")
+        runner.install_in_sandbox("/app/sample_package_skuty")
         print('-' * terminal_size.columns)
 
 

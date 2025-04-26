@@ -14,13 +14,14 @@ def create_command(sandbox: docker.models.containers.Container, export_file: str
     Returns:
         list[str]: The command to run sysdig.
     """
-    if len(filters) == 0:
+    if not filters or len(filters) == 0:
         filter_string = ""
     else:
         filter_string = "and " + " and ".join(filters) + " "
+        print (f"PyDetective debug: Sysdig filters: {filter_string}")
 
     output_format = "%proc.name %proc.cmdline %proc.args %evt.type %evt.info %evt.arg.flags %fd.name"
-    command = [f"sudo sysdig -j -pc container.name={sandbox.name} {filter_string}-p'{output_format}' > {export_file}"]
+    command = [f"sudo sysdig -j -w {export_file} -pc container.name={sandbox.name} {filter_string} -p'{output_format}'"]
     print(f"PyDetective debug: Sysdig command: {command}")
 
     return command
