@@ -1,5 +1,0 @@
-engine:
-  kind: replay
-  replay:
-    capture_file: out/sysdig_output.scap
-json_output: true

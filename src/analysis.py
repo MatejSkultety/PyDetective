@@ -1,5 +1,6 @@
 import pyshark
 import json
+import subprocess
 
 
 def parse_network_artefacts(pcap_file: str, ignored_hosts: list[str] = None, ignored_ips: list[str] = None) -> tuple[set, set, set]:
@@ -20,7 +21,6 @@ def parse_network_artefacts(pcap_file: str, ignored_hosts: list[str] = None, ign
     """
     ip_addresses = set()
     domain_names = set()
-    hosts = set()
 
     cap = pyshark.FileCapture(pcap_file, display_filter='dns or ip')
     for packet in cap:
@@ -41,51 +41,20 @@ def parse_network_artefacts(pcap_file: str, ignored_hosts: list[str] = None, ign
                 ip_addresses.add(packet.dns.a)
             if hasattr(packet.dns, 'aaaa') and packet.dns.aaaa:  # AAAA record (IPv6)
                 ip_addresses.add(packet.dns.aaaa)
-        for domain in domain_names:
-            domain_parts = domain.split('.')
-            if len(domain_parts) > 1:
-                host = '.'.join(domain_parts[-2:])  # Get last two parts
-                if ignored_hosts and not (host in ignored_hosts):
-                    hosts.add(host)
+    
     cap.close()
-    return ip_addresses, domain_names, hosts
+    return ip_addresses, domain_names
 
 
-def parse_syscalls_artefacts(json_path: str) -> list:
-    """
-    Extracts unique file operations from a JSONL file containing Sysdig event data.
+def analyse_syscalls_artefacts(scap_path: str) -> dict:
 
-    Args:
-        json_path (str): Path to the JSONL file.
+    command = [f"sudo falco"]
+    process = subprocess.Popen(command, shell=True)
+    process.wait()
 
-    Returns:
-        list: A list of dictionaries, each representing a unique file operation with keys:
-              'operation', 'filename', and 'flag'.
-    """
-    unique_operations = set()
-    operations = set()
-    files = set()
-    flags = set()
-    # JSONL file needs to be processed line by line
-    with open(json_path, 'r') as file:
-        for line in file:
-            try:
-                syscall = json.loads(line.strip())
-                event_type = syscall.get("evt.type")
-                filename = syscall.get("fd.name")
-                flag = syscall.get("evt.arg.flags")
-                operation_tuple = (event_type, filename, flag)
-                unique_operations.add(operation_tuple)
-                operations.add(event_type)
-                files.add(filename)
-                flags.add(flag)
-            except json.JSONDecodeError:
-                # Handle JSON parsing errors (e.g., malformed lines)
-                continue
 
-    file_operations_list = [
-        {'operation': op, 'filename': fn, 'flag': fl}
-        for op, fn, fl in unique_operations
-    ]
-
-    return file_operations_list
+# engine:
+#   kind: replay
+#   replay:
+#     capture_file: out/sysdig_output.scap
+# json_output: true
