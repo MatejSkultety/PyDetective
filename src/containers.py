@@ -3,6 +3,7 @@ import tarfile
 from io import BytesIO
 import subprocess
 import os
+import shutil
 
 
 def build_sandbox_image(client: docker.client) -> docker.models.images.Image:
@@ -21,7 +22,7 @@ def build_sandbox_image(client: docker.client) -> docker.models.images.Image:
     # TODO choose pip and python version
     print("PyDetective debug: Building sandbox image")
     sandbox_image = client.images.build(
-        path="./src/sandbox",
+        path="./sandbox",
         tag="pydetective_sandbox_container:latest",
     )
     print("PyDetective debug: Sandbox image built: ", sandbox_image[0].tags, sandbox_image[0].short_id)
@@ -41,7 +42,7 @@ def create_sandbox_container(client: docker.client, requirements: str) -> docker
     Returns:
         docker.models.containers.Container: The created Docker container.
     """
-    cmd = ["pip", "install", "--no-cache-dir", requirements]
+    cmd = ["sh", "-c", "pip install --no-cache-dir --break-system-packages ./downloaded_package && ls /app"]
     print("PyDetective debug: Creating sandbox container with command: ", cmd)
     sandbox_container = client.containers.create(
         "pydetective_sandbox_container",
@@ -80,6 +81,32 @@ def extract_file_from_container(container: docker.models.containers.Container, s
 
     except docker.errors.APIError as e:
         print(f"Error extracting file: {e}")
+    except Exception as e:
+        print(f"Unexpected error: {e}")
+
+
+def copy_package_to_container(container: docker.models.containers.Container, src_path: str, to_path: str) -> None:
+    """
+    Copy a package from the host to the Docker container.
+
+    Args:
+        container (docker.models.containers.Container): The Docker container object.
+        src_path (str): The path to the package on the host.
+        to_path (str): The destination path inside the container.
+
+    Returns:
+        None
+    """
+    try:
+        tar_stream = BytesIO()
+        with tarfile.open(fileobj=tar_stream, mode="w") as tar:
+            tar.add(src_path, arcname=os.path.basename(src_path))
+        tar_stream.seek(0)
+
+        container.put_archive(to_path, tar_stream)
+        print(f"Package {src_path} copied to container at {to_path}")
+    except docker.errors.APIError as e:
+        print(f"Error copying package to container: {e}")
     except Exception as e:
         print(f"Unexpected error: {e}")
 
@@ -140,6 +167,13 @@ def download_package(package_name: str, destination: str) -> str:
         with tarfile.open(tar_file_path, "r:gz") as tar:
             tar.extractall(path=destination)
             extracted_folder_name = tar.getnames()[0]
+
+        extracted_folder_path = os.path.join(destination, extracted_folder_name)
+        renamed_folder_path = os.path.join(destination, "downloaded_package")
+        if os.path.exists(renamed_folder_path):
+            shutil.rmtree(renamed_folder_path)  # Remove existing folder if it exists
+        os.rename(extracted_folder_path, renamed_folder_path)
+
         os.remove(tar_file_path)
         return os.path.join(destination, extracted_folder_name)
     except Exception as e:

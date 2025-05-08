@@ -1,5 +1,8 @@
-FROM python:3.12-slim
+FROM ubuntu
 
 WORKDIR /app
 
-COPY sample_malicious_package /app/sample_malicious_package
+# Install Python and pip
+RUN apt-get update && \
+    apt-get install -y python3 python3-pip && \
+    apt-get clean
