@@ -1,6 +1,7 @@
 import pyshark
 import json
 import subprocess
+import io
 
 
 def parse_network_artefacts(pcap_file: str, ignored_hosts: list[str] = None, ignored_ips: list[str] = None) -> tuple[set, set, set]:
@@ -48,13 +49,6 @@ def parse_network_artefacts(pcap_file: str, ignored_hosts: list[str] = None, ign
 
 def analyse_syscalls_artefacts(scap_path: str) -> dict:
 
-    command = [f"sudo falco"]
-    process = subprocess.Popen(command, shell=True)
+    command = [f"sudo falco -c config/falco.yaml"]
+    process = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE)
     process.wait()
-
-
-# engine:
-#   kind: replay
-#   replay:
-#     capture_file: out/sysdig_output.scap
-# json_output: true
