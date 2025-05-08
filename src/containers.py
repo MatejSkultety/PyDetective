@@ -1,6 +1,8 @@
 import docker
 import tarfile
 from io import BytesIO
+import subprocess
+import os
 
 
 def build_sandbox_image(client: docker.client) -> docker.models.images.Image:
@@ -100,3 +102,47 @@ def get_logs_from_container(sandbox_container: docker.models.containers.Containe
             log_file.write(logs.decode("utf-8"))
     else:
         print(logs.decode("utf-8"))
+
+
+def download_package(package_name: str, destination: str) -> str:
+    """
+    Downloads a Python package using `pip download`, extracts it, and returns the name of the extracted folder.
+
+    Args:
+        package_name (str): The name of the package to download.
+        destination (str): The directory where the package will be downloaded and extracted.
+
+    Returns:
+        str: The name of the extracted folder.
+
+    Raises:
+        Exception: If the download or extraction fails.
+    """
+    tar_file_path = None
+
+    # Download the package
+    try:
+        os.makedirs(destination, exist_ok=True)
+        downloader = subprocess.Popen(f"pip download -d {destination} {package_name}", shell=True, stdout=subprocess.PIPE)
+        downloader.wait()
+        tar_files = [f for f in os.listdir(destination) if f.endswith(".tar.gz")]
+        if not tar_files:
+            # need to check if it's local package
+            return None
+        if len(tar_files) > 1:
+            raise Exception(f"Multiple tar files found in the destination directory: {len(tar_files)}")
+        tar_file_path = os.path.join(destination, tar_files[0])
+    except Exception as e:
+        raise Exception(f"Failed to download package: {e}")
+
+    # Extract the package
+    try:
+        with tarfile.open(tar_file_path, "r:gz") as tar:
+            tar.extractall(path=destination)
+            extracted_folder_name = tar.getnames()[0]
+        os.remove(tar_file_path)
+        return os.path.join(destination, extracted_folder_name)
+    except Exception as e:
+        if tar_file_path and os.path.exists(tar_file_path):
+            os.remove(tar_file_path)
+        raise Exception(f"Failed to extract package: {e}")
