@@ -53,6 +53,8 @@ def analyse_syscalls_artefacts(scap_path: str) -> dict:
     command = [f"sudo falco -c config/falco.yaml"]
     process = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE)
     process.wait()
+    for line in process.stdout:
+        print(line.decode().strip())
 
 
 class StaticAnalyzer:

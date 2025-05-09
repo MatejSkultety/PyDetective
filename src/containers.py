@@ -29,7 +29,7 @@ def build_sandbox_image(client: docker.client) -> docker.models.images.Image:
     return sandbox_image
 
 
-def create_sandbox_container(client: docker.client, requirements: str) -> docker.models.containers.Container:
+def create_sandbox_container(client: docker.client) -> docker.models.containers.Container:
     """
     Create a Docker container for the sandbox environment.
     The container is based on the "pydetective_sandbox_container" image.
@@ -37,7 +37,6 @@ def create_sandbox_container(client: docker.client, requirements: str) -> docker
 
     Args:
         client (docker.client): The Docker client instance.
-        requirements (str): Package to be installed or the path to the requirements file to install.
 
     Returns:
         docker.models.containers.Container: The created Docker container.
