@@ -5,9 +5,10 @@ import yara
 import os
 from datetime import datetime
 
-def parse_network_artefacts(pcap_file: str, ignored_hosts: list[str] = None, ignored_ips: list[str] = None) -> tuple[set, set, set]:
+
+def parse_network_artefacts(pcap_file: str, ignored_hosts: list[str] = None, ignored_ips: list[str] = None) -> tuple[set, set]:
     """
-    Extracts unique IP addresses, domain names, and hosts from a pcap file.
+    Extracts unique IP addresses, domain and names from a pcap file.
     It uses the pyshark library to read the pcap file and extract relevant information.
 
     Args:
@@ -16,10 +17,9 @@ def parse_network_artefacts(pcap_file: str, ignored_hosts: list[str] = None, ign
         ignored_ips (list[str], optional): List of IP addresses to ignore. Defaults to None.
 
     Returns:
-        tuple: A tuple containing three sets:
+        tuple: A tuple containing two sets:
             - IP addresses (set): Unique IP addresses found in the pcap file.
             - Domain names (set): Unique domain names found in the pcap file.
-            - Hosts (set): Unique hosts derived from the domain names.
     """
     ip_addresses = set()
     domain_names = set()
@@ -43,31 +43,59 @@ def parse_network_artefacts(pcap_file: str, ignored_hosts: list[str] = None, ign
                 ip_addresses.add(packet.dns.a)
             if hasattr(packet.dns, 'aaaa') and packet.dns.aaaa:  # AAAA record (IPv6)
                 ip_addresses.add(packet.dns.aaaa)
-    
     cap.close()
     return ip_addresses, domain_names
 
 
-def analyse_syscalls_artefacts(scap_path: str) -> dict:
-
-    command = [f"sudo falco -c config/falco.yaml"]
-    process = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE)
+def analyse_syscalls_artefacts(config_path: str, export_path: str) -> None:
+    """
+    Run Falco to analyze syscalls captured using Sysdig for potentialy malicious behaviour
+    and export the results to a file.
+    
+    Args:
+        config_path (str): Path to the Falco configuration file.
+        export_path (str): Path to the file where the Falco output will be saved.
+        
+    Returns:
+        None
+    """
+    command = [f"sudo falco -c {config_path} > {export_path}"]
+    process = subprocess.Popen(command, shell=True)
     process.wait()
-    for line in process.stdout:
-        print(line.decode().strip())
 
-
+# TODO consider max time limit for the process
 class StaticAnalyzer:
-    def __init__(self, rules_path, max_size_mb=10):
+    """
+    A class to perform static analysis on files using YARA rules.
+    YARA rules can be compiled from a directory or a single file and scan files for matches.
+    """
+    def __init__(self: object, rules_path: str) -> None:
+        """
+        Initialize the StaticAnalyzer with the path to YARA rules.
+
+        Args:
+            rules_path (str): The path to the directory or file containing YARA rules.
+
+        Returns:
+            None
+        """
         self.rules = self.compile_rules(rules_path)
-        self.max_size = max_size_mb * 1024 * 1024  # Convert MB to bytes
         self.results = []
     
-    def compile_rules(self, rules_path):
-        """Compile all YARA rules from a directory"""
+
+    def compile_rules(self: object, rules_path: str) -> dict:
+        """
+        Compile YARA rules from a directory or a single file.
+        If the path is a directory, it will compile all .yar and .yara files in that directory.
+        
+        Args:
+            rules_path (str): The path to the directory or file containing YARA rules.
+
+        Returns:
+            dict: A dictionary of compiled YARA rules.
+        """
         if os.path.isfile(rules_path):
             return yara.compile(filepath=rules_path)
-        
         all_rules = {}
         for root, _, files in os.walk(rules_path):
             for file in files:
@@ -81,14 +109,22 @@ class StaticAnalyzer:
         return all_rules
     
 
-    def scan_file(self, file_path):
-        """Scan a single file with all loaded rules"""
+    def scan_file(self: object, file_path: str) -> dict:
+        """
+        Perform static analysis on a single file using compiled YARA rules.
+
+        Args:
+            file_path (str): The path to the file to scan.
+
+        Returns:
+            dict: A dictionary containing the results of the scan, including matches found.
+        """
+        self.results = []
         result = {
             'file': file_path,
             'timestamp': datetime.now().isoformat(),
             'matches': []
         }
-            
         try:
             for rule_name, rule in self.rules.items():
                 matches = rule.match(filepath=file_path)
@@ -101,7 +137,6 @@ class StaticAnalyzer:
                             'meta': match.meta,
                             'strings': []
                         }
-                        
                         for string_match in match.strings:
                             for instance in string_match.instances:
                                 string_info = {
@@ -110,24 +145,42 @@ class StaticAnalyzer:
                                     'matched_data': instance.matched_data.hex()[:50] + '...' if len(instance.matched_data) > 25 else instance.matched_data.hex()
                                 }
                                 match_info['strings'].append(string_info)
-                        
                         result['matches'].append(match_info)
         except Exception as e:
             result['error'] = str(e)
-            
         self.results.append(result)
         return result
     
 
-    def scan_directory(self, directory_path):
-        """Recursively scan all files in a directory"""
+    def scan_directory(self: object, directory_path: str, export_path: str = None) -> None:
+        """
+        Recursively scan all files in a directory using compiled YARA rules.
+
+        Args:
+            directory_path (str): The path to the directory to scan.
+            export_path (str, optional): The path to the file where the results will be saved. Defaults to None.
+
+        Returns:
+            None
+        
+        """
         for root, _, files in os.walk(directory_path):
             for file in files:
                 file_path = os.path.join(root, file)
                 self.scan_file(file_path)
+        if export_path:
+            self.export_results(export_path)
     
     
-    def export_results(self, output_file):
-        """Export scan results to a JSON file"""
-        with open(output_file, 'w') as f:
+    def export_results(self: object, export_path: str) -> None:
+        """
+        Export the results of static analysis to a JSON file.
+
+        Args:
+            export_path (str): The path to the file where the results will be saved.
+
+        Returns:
+            None
+        """
+        with open(export_path, 'w') as f:
             json.dump(self.results, f, indent=2)

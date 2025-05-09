@@ -1,5 +1,3 @@
-
-
 SYSCALLS_DEFAULT_FILTERS = [
 	"proc.exeline!='uname -p'",
 	"proc.exeline!='uname -rs'",
