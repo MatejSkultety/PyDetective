@@ -91,15 +91,23 @@ def evaluate_post_install_results():
 
 def evaluate_package(package_path: str, syscalls_path: str, static_path: str) -> dict:
     # Call individual evaluation functions
+    network_result = evaluate_network_results()
     syscalls_result = evaluate_syscalls_results(syscalls_path)
     static_result = evaluate_static_results(static_path)
+    post_install_result = evaluate_post_install_results()
 
     # Aggregate results
-    final_verdict = "SAFE"
-    if syscalls_result["verdict"] == "MALICIOUS" or static_result["verdict"] == "MALICIOUS":
+    verdicts = set()
+    verdicts.add(network_result["verdict"])
+    verdicts.add(syscalls_result["verdict"])
+    verdicts.add(static_result["verdict"])
+    verdicts.add(post_install_result["verdict"])
+    if "MALICIOUS" in verdicts:
         final_verdict = "MALICIOUS"
-    elif syscalls_result["verdict"] == "DANGEROUS" or static_result["verdict"] == "DANGEROUS":
+    elif "DANGEROUS" in verdicts:
         final_verdict = "DANGEROUS"
+    else:
+        final_verdict = "SAFE"
 
     # Create the final result dictionary
     package_evaluation = {
@@ -107,8 +115,10 @@ def evaluate_package(package_path: str, syscalls_path: str, static_path: str) ->
         "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
         "final_verdict": final_verdict,
         "evaluations": {
+            "network": network_result,
             "syscalls": syscalls_result,
             "static": static_result,
+            "post_install": post_install_result
         }
     }
 
