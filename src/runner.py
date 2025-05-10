@@ -4,14 +4,14 @@ import subprocess
 from . import containers, scanning, analysis
 
 
-def analyze_package(client: docker.client, package_path: str, secure_mode: bool) -> None:
+def analyze_package(client: docker.client, package_path: str, secure_mode: bool = False) -> None:
     """
     Analyze a package by performing network and syscall scans, followed by analysis.
 
     Args:
         client (docker.client): The Docker client instance.
         package_path (str): Path to the package to analyze.
-        secure_mode (bool): Flag to indicate if secure mode is enabled.
+        secure_mode (bool): Flag to indicate if secure mode is enabled. Defaults to False.
 
     Returns:
         dict: A dictionary containing the results of the network and syscall analyses.
@@ -23,8 +23,8 @@ def analyze_package(client: docker.client, package_path: str, secure_mode: bool)
     # TODO evaluate and if dangerous, stop the process
 
     containers.build_sandbox_image(client)
-    sandbox_container = containers.create_sandbox_container(client, "pydetective_sandbox_container", package_path)
-    containers.copy_package_to_container(sandbox_container, package_path, "./app", secure_mode)
+    sandbox_container = containers.create_sandbox_container(client, "pydetective_sandbox_container", package_path, secure_mode)
+    containers.copy_package_to_container(sandbox_container, package_path, "./app")
 
     # Paths for output files
     network_output_path = "out/tcpdump_output.pcap"

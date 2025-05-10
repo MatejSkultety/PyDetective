@@ -60,7 +60,7 @@ def analyse_syscalls_artefacts(config_path: str, export_path: str) -> None:
         None
     """
     command = [f"sudo falco -c {config_path} > {export_path}"]
-    process = subprocess.Popen(command, shell=True)
+    process = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     process.wait()
 
 # TODO consider max time limit for the process
