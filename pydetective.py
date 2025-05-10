@@ -8,7 +8,7 @@ import time
 import yaml
 import docker
 
-from src.analyst_profile import AnalystProfile
+from src.profile import AnalystProfile
 from src import runner
 
 
@@ -50,17 +50,17 @@ def is_valid_file(filename, filetype):
     return True
 
 
-def check_required_structure(analyst_profile):
+def check_required_structure(profile):
     base_relative_path = os.path.dirname(os.path.realpath(sys.argv[0]))
-    out_dir = os.path.join(base_relative_path, analyst_profile.output_folder_path)
-    sandbox_dir = os.path.join(base_relative_path, analyst_profile.sandbocx_folder_path)
-    src_dir = os.path.join(base_relative_path, analyst_profile.src_folder_path)
-    config_dir = os.path.join(base_relative_path, analyst_profile.config_folder_path)
-    rules_dir = os.path.join(base_relative_path, analyst_profile.rules_folder_path)
-    static_rules_dir = os.path.join(base_relative_path, analyst_profile.static_rules_folder_path)
-    dynamic_rules_dir = os.path.join(base_relative_path, analyst_profile.dynamic_rules_folder_path)
+    out_dir = os.path.join(base_relative_path, profile.output_folder_path)
+    sandbox_dir = os.path.join(base_relative_path, profile.sandbox_folder_path)
+    src_dir = os.path.join(base_relative_path, profile.src_folder_path)
+    config_dir = os.path.join(base_relative_path, profile.config_folder_path)
+    rules_dir = os.path.join(base_relative_path, profile.rules_folder_path)
+    static_rules_dir = os.path.join(base_relative_path, profile.static_rules_folder_path)
+    dynamic_rules_dir = os.path.join(base_relative_path, profile.dynamic_rules_folder_path)
 
-    installation_script = os.path.join(base_relative_path, analyst_profile.installation_script)
+    installation_script = os.path.join(base_relative_path, profile.installation_script)
 
     if not os.path.isdir(out_dir):
         print(f"[{time.strftime('%H:%M:%S')}] [INFO] Creating '{out_dir}' for storing analysis output files ...")
@@ -205,12 +205,12 @@ def main():
         print(f"[{time.strftime('%H:%M:%S')}] [INFO] Loading configuration file '{args.config}' ...")
         logging.info(f"Loading configuration file '{args.config}'")
         config = load_config(args.config)
-        analyst_profile = AnalystProfile(config)
+        profile = AnalystProfile(config)
 
     print('-' * terminal_size.columns)
     print(f"[{time.strftime('%H:%M:%S')}] [INFO] Verifying required directory structure ...")
     logging.info("Verifying required directory structure")
-    check_required_structure(analyst_profile)
+    check_required_structure(profile)
     print('-' * terminal_size.columns)
     
     # Program logic goes here

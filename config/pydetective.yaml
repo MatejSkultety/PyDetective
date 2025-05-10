@@ -15,7 +15,7 @@ file_paths:
   network_output_path: out/tcpdump_output.pcap
   syscalls_output_path: out/sysdig_output.scap
   evaluation_output_path: out/evaluation_result.json
-  sandbocx_folder_path: sandbox
+  sandbox_folder_path: sandbox
   sample_package_path: sandbox/sample_malicious_package
   downloaded_package_path: downloaded_package
   falco_config_path: config/falco.yaml

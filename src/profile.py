@@ -1,0 +1,42 @@
+import logging
+import time
+import sys
+
+
+class Profile:
+    def __init__(self, config):
+        self.file_paths = config.get('file_paths')
+        if self.file_paths:
+            # Load all file paths from the configuration
+            self.rules_folder_path = self.file_paths.get('rules_folder_path')
+            self.static_rules_folder_path = self.file_paths.get('static_rules_folder_path')
+            self.dynamic_rules_folder_path = self.file_paths.get('dynamic_rules_folder_path')
+            self.logs_folder_path = self.file_paths.get('logs_folder_path')
+            self.output_folder_path = self.file_paths.get('output_folder_path')
+            self.static_result_path = self.file_paths.get('static_result_path')
+            self.syscalls_result_path = self.file_paths.get('syscalls_result_path')
+            self.network_result_path = self.file_paths.get('network_result_path')
+            self.post_install_result_path = self.file_paths.get('post_install_result_path')
+            self.network_output_path = self.file_paths.get('network_output_path')
+            self.syscalls_output_path = self.file_paths.get('syscalls_output_path')
+            self.evaluation_output_path = self.file_paths.get('evaluation_output_path')
+            self.sandbox_folder_path = self.file_paths.get('sandbox_folder_path')
+            self.sample_package_path = self.file_paths.get('sample_package_path')
+            self.downloaded_package_path = self.file_paths.get('downloaded_package_path')
+            self.falco_config_path = self.file_paths.get('falco_config_path')
+            self.container_dir_path = self.file_paths.get('container_dir_path')
+            self.pypi_projects_dependency_path = self.file_paths.get('pypi_projects_dependency_path')
+            self.config_folder_path = self.file_paths.get('config_folder_path')
+            self.src_folder_path = self.file_paths.get('src_folder_path')
+
+            # Check if any required file path is missing
+            if any(file_path is None for file_path in self.file_paths.values()):
+                print(f"[{time.strftime('%H:%M:%S')}] [ERROR] The configuration file does not contain all required file paths ...")
+                logging.error(f"The configuration file does not contain all required file paths")
+                print("\nExiting program ...\n")
+                sys.exit(1)
+        else:
+            print(f"[{time.strftime('%H:%M:%S')}] [ERROR] File paths are not present in the configuration file ...")
+            logging.error(f"File paths are not present in the configuration file")
+            print("\nExiting program ...\n")
+            sys.exit(1)
