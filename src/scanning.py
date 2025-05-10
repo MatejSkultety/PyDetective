@@ -1,6 +1,8 @@
 import docker
 import subprocess
 
+from . import containers
+
 
 def create_network_command(export_path: str) -> list:
     """
@@ -41,6 +43,23 @@ def scan_network(client: docker.client, sandbox: docker.models.containers.Contai
     )
     print("PyDetective debug: Tcpdump container started: ID: ", tcpdump_container.id)
     return tcpdump_container
+
+
+def stop_network_scan(tcpdump_container: docker.models.containers.Container, export_path: str) -> None:
+    """
+    Stop the network scan, extract the output file from the container and remove the container.
+    
+    Args:
+        tcpdump_container (docker.models.containers.Container): The tcpdump container instance.
+        export_path (str): The path to the file where the tcpdump output will be saved.
+
+    Returns:
+        None
+    """
+    directory, file_name = export_path.rsplit("/", 1)
+    containers.extract_file_from_container(tcpdump_container, file_name, directory)
+    tcpdump_container.stop()
+    tcpdump_container.remove(force=True)
 
 
 def create_syscalls_command(sandbox: docker.models.containers.Container, export_path: str, filters: list[str]) -> list[str]:

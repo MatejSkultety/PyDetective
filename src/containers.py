@@ -44,7 +44,7 @@ def create_docker_command(package_path: str) -> list[str]:
     return cmd
 
 
-def create_sandbox_container(client: docker.client, image_name: str, package_path: str) -> docker.models.containers.Container:
+def create_sandbox_container(client: docker.client, image_name: str, package_path: str, secure_mode: bool = False) -> docker.models.containers.Container:
     """
     Create a Docker container for the sandbox environment.
     The container is based on the image specified by `image_name`.
@@ -54,6 +54,7 @@ def create_sandbox_container(client: docker.client, image_name: str, package_pat
         client (docker.client): The Docker client instance.
         image_name (str): The name of the Docker image to use.
         package_path (str): The path to the package to be installed.
+        secure_mode (bool): Flag to indicate if secure mode is enabled. Defaults to False.
 
     Returns:
         docker.models.containers.Container: The created Docker container.
@@ -65,6 +66,7 @@ def create_sandbox_container(client: docker.client, image_name: str, package_pat
         tty=True,
         detach=True,
         command=cmd,
+        network_disabled=secure_mode,
     )
     print("PyDetective debug: Sandbox container created: ", sandbox_container.id)
     return sandbox_container
