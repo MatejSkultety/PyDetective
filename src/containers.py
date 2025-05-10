@@ -20,7 +20,7 @@ def build_sandbox_image(client: docker.client) -> docker.models.images.Image:
     """
     print("PyDetective debug: Building sandbox image")
     sandbox_image = client.images.build(
-        path="./sandbox",
+        path="sandbox",
         tag="pydetective_sandbox_container:latest",
     )
     print("PyDetective debug: Sandbox image built: ", sandbox_image[0].tags, sandbox_image[0].short_id)

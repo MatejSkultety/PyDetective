@@ -1,0 +1,43 @@
+containers:
+  image_name: pydetective_sandbox_container
+  image_tag: pydetective_sandbox_container:latest
+
+file_paths:
+  rules_folder_path: rules
+  static_rules_folder_path: rules/static_rules
+  dynamic_rules_folder_path: rules/dynamic_rules
+  logs_folder_path: logs
+  output_folder_path: out
+  static_result_path: out/static_result.json
+  syscalls_result_path: out/syscalls_result.json
+  network_result_path: out/network_result.json
+  post_install_result_path: out/post_install_result.json
+  network_output_path: out/tcpdump_output.pcap
+  syscalls_output_path: out/sysdig_output.scap
+  evaluation_output_path: out/evaluation_result.json
+  sandbocx_folder_path: sandbox
+  sample_package_path: sandbox/sample_malicious_package
+  downloaded_package_path: downloaded_package
+  falco_config_path: config/falco.yaml
+  container_dir_path: ./app
+  pypi_projects_dependency_path: pyproject.toml
+  config_folder_path: config
+  src_folder_path: src
+
+ignored_ips:
+
+ignored_domains:
+
+enrichment_services:
+  abuseipdb: False
+  threatfox: False
+  virustotal: False
+  shodan: False
+  alienvault: False
+  urlhaus: False
+
+thresholds:
+  MAX_FREQUENCY: 10 # percentage
+  MAX_DURATION: 14000 # seconds
+  MAX_HTTP_SIZE: 50000 # bytes
+  MAX_SUBDOMAIN_LENGTH: 30 # chars
