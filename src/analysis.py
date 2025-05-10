@@ -119,7 +119,6 @@ class StaticAnalyzer:
         Returns:
             dict: A dictionary containing the results of the scan, including matches found.
         """
-        self.results = []
         result = {
             'file': file_path,
             'timestamp': datetime.now().isoformat(),
@@ -164,6 +163,7 @@ class StaticAnalyzer:
             None
         
         """
+        self.results = []
         for root, _, files in os.walk(directory_path):
             for file in files:
                 file_path = os.path.join(root, file)
