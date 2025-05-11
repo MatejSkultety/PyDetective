@@ -8,8 +8,8 @@ import time
 import yaml
 import docker
 
-from src.profile import AnalystProfile
-from src import runner
+from src.profile import Profile
+from src import runner, containers, scanning, analysis
 
 
 def banner():
@@ -205,7 +205,7 @@ def main():
         print(f"[{time.strftime('%H:%M:%S')}] [INFO] Loading configuration file '{args.config}' ...")
         logging.info(f"Loading configuration file '{args.config}'")
         config = load_config(args.config)
-        profile = AnalystProfile(config)
+        profile = Profile(config)
 
     print('-' * terminal_size.columns)
     print(f"[{time.strftime('%H:%M:%S')}] [INFO] Verifying required directory structure ...")
@@ -217,7 +217,8 @@ def main():
 
 
     client = docker.from_env()
-    runner.analyze_package(client, "sandbox/sample_malicious_package", secure_mode=False)
+    containers.download_package("name", profile.output_folder_path, profile.downloaded_package_path)
+    runner.analyze_package(client, profile, "sandbox/sample_malicious_package", secure_mode=False)
         
 
 

@@ -6,7 +6,7 @@ import os
 import shutil
 
 
-def build_sandbox_image(client: docker.client) -> docker.models.images.Image:
+def build_sandbox_image(client: docker.client, build_path: str, image_tag: str) -> docker.models.images.Image:
     """
     Build a Docker image for the sandbox environment.
     The image is built from the Dockerfile located in the `src/sandbox` directory.
@@ -14,14 +14,16 @@ def build_sandbox_image(client: docker.client) -> docker.models.images.Image:
 
     Args:
         client (docker.client): The Docker client instance.
+        build_path (str): The path to the directory containing the Dockerfile.
+        image_tag (str): The tag to assign to the built image.
 
     Returns:
         docker.models.images.Image: The created Docker image.
     """
     print("PyDetective debug: Building sandbox image")
     sandbox_image = client.images.build(
-        path="sandbox",
-        tag="pydetective_sandbox_container:latest",
+        path=build_path,
+        tag=image_tag,
     )
     print("PyDetective debug: Sandbox image built: ", sandbox_image[0].tags, sandbox_image[0].short_id)
     return sandbox_image
@@ -83,10 +85,6 @@ def extract_file_from_container(container: docker.models.containers.Container, s
 
     Returns:
         None
-
-    Raises:
-        docker.errors.APIError: If there is an error communicating with the Docker API.
-        Exception: For any other unexpected errors.
     """
     try:
         bits, _ = container.get_archive(source_path)
@@ -146,14 +144,15 @@ def get_logs_from_container(sandbox_container: docker.models.containers.Containe
         print(logs.decode("utf-8"))
 
 
-def download_package(package_name: str, destination_path: str) -> str:
+def download_package(package_name: str, destination_path: str, downloaded_dir_name: str) -> str:
     """
     Downloads a Python package using `pip download`, extracts it, and returns the name of the extracted folder.
 
     Args:
         package_name (str): The name of the package to download.
         destination_path (str): The directory where the package will be downloaded and extracted.
-
+        downloaded_dir_name (str): The name of the directory where the package will be extracted.
+        
     Returns:
         str: The name of the extracted folder.
 
@@ -183,7 +182,7 @@ def download_package(package_name: str, destination_path: str) -> str:
             extracted_folder_name = tar.getnames()[0]
 
         extracted_folder_path = os.path.join(destination_path, extracted_folder_name)
-        renamed_folder_path = os.path.join(destination_path, "downloaded_package")
+        renamed_folder_path = os.path.join(destination_path, downloaded_dir_name)
         if os.path.exists(renamed_folder_path):
             shutil.rmtree(renamed_folder_path)  # Remove existing folder if it exists
         os.rename(extracted_folder_path, renamed_folder_path)

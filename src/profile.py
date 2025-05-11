@@ -40,3 +40,20 @@ class Profile:
             logging.error(f"File paths are not present in the configuration file")
             print("\nExiting program ...\n")
             sys.exit(1)
+
+        self.containers = config.get('containers')
+        if self.containers:
+            self.image_name = self.containers.get('image_name')
+            self.image_tag = self.containers.get('image_tag')
+
+            # Check if any required container configuration is missing
+            if any(container_value is None for container_value in self.containers.values()):
+                print(f"[{time.strftime('%H:%M:%S')}] [ERROR] The configuration file does not contain all required container configurations ...")
+                logging.error(f"The configuration file does not contain all required container configurations")
+                print("\nExiting program ...\n")
+                sys.exit(1)
+        else:
+            print(f"[{time.strftime('%H:%M:%S')}] [ERROR] Container configurations are not present in the configuration file ...")
+            logging.error(f"Container configurations are not present in the configuration file")
+            print("\nExiting program ...\n")
+            sys.exit(1)
