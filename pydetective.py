@@ -41,13 +41,33 @@ def is_valid_file(filename, filetype):
         sys.exit(1)
     else:
         if filetype == "yaml":
-            if not filename.endswith(".yml") or filename.endswith(".yaml"):
+            if not (filename.endswith(".yml") or filename.endswith(".yaml")):
                 print(
                     f"[{time.strftime('%H:%M:%S')}] [ERROR] Provided file '{filename}' is not a yaml file")
                 logging.error(f"Provided file '{filename}' is not a yaml file")
                 print("\nExiting program ...\n")
                 sys.exit(1)
     return True
+
+
+def is_local_package(package_name):
+    if '/' in package_name or '\\' in package_name:
+        if os.path.exists(package_name):
+            if os.path.isdir(package_name):
+                logging.info(f"Local package '{package_name}' found")
+                return True
+            else:
+                print(f"[{time.strftime('%H:%M:%S')}] [ERROR] Provided path '{package_name}' is not a directory")
+                logging.error(f"Provided path '{package_name}' is not a directory")
+                print("\nExiting program ...\n")
+                sys.exit(1)
+        else:
+            print(f"[{time.strftime('%H:%M:%S')}] [ERROR] Provided package path '{package_name}' does not exist")
+            logging.error(f"Provided package path '{package_name}' does not exist")
+            print("\nExiting program ...\n")
+            sys.exit(1)
+    else:
+        return False
 
 
 def check_required_structure(profile):
@@ -148,28 +168,29 @@ def arg_formatter():
 def parse_arguments():
     parser = argparse.ArgumentParser(formatter_class=arg_formatter(), prog='pydetective', description='Tool for detecting dangerous Python packages.')
 
-    parser.add_argument(
-        '-q', '--quiet', help="do not print banner", action='store_true')
+
 
     update_group = parser.add_argument_group('required options')
-    required_args = update_group.add_mutually_exclusive_group(required=True)
-    required_args.add_argument('-p', '--package', metavar='TEXT', 
-                                help='package to analyze (e.g. "requests")')
+    # required_args = update_group.add_mutually_exclusive_group(required=True)
+    parser.add_argument('package_name', metavar='PACKAGE',
+                        help='Name of the package to analyze (e.g. "requests") or path to local package (e.g. "path/to/package")')
   
-    parser.add_argument('-c', '--config', metavar='FILE', default="config/config.yml",
-                        help="configuration file (default: 'config/config.yml')")
-    parser.add_argument('-w', '--write-extracted', action='store_true',
-                        help='write extracted data to a JSON file')
-
-    enable_group = parser.add_argument_group('enable options')
-    enable_group.add_argument('-s', '--secure', action='store_true',
-                            help="perform more secure analysis (don't execute suspicious files, disable network connection)")
-    enable_group.add_argument('-i', '--install', action='store_true',
-                            help="after analysis, (if safe) install the package on a host environment")
-    enable_group.add_argument('-v', '--verbose', action='store_true',
-                              help="print more detailed information")
-    enable_group.add_argument('-t', '--test', action='store_true',
-                              help="testing mode, execute analysis of sample package")
+    parser.add_argument('-c', '--config', metavar='FILE', default='config/pydetective.yaml',
+                        help="Configuration file (default: 'config/pydetective.yaml')")
+    parser.add_argument('-w', '--write', metavar='FILE', default='out/pydetective_result.json',
+                        help='Write extracted data to a JSON file')
+    parser.add_argument('-q', '--quiet', action='store_true',
+                        help='Do not print banner')
+    
+    analysis_group = parser.add_argument_group('analysis parameters')
+    analysis_group.add_argument('-s', '--secure', action='store_true',
+                            help="Perform more secure analysis (don't execute suspicious files, disable network connection)")
+    analysis_group.add_argument('-i', '--install', action='store_true',
+                            help="After analysis, (if safe) install the package on a host environment")
+    analysis_group.add_argument('-v', '--verbose', action='store_true',
+                              help="Print more detailed information")
+    analysis_group.add_argument('-t', '--test', action='store_true',
+                              help="Testing mode, execute analysis of sample package")
 
     return parser.parse_args(args=None if sys.argv[1:] else ['--help'])
 
@@ -185,45 +206,70 @@ def init_logger():
     logger = logging.getLogger('__name__')
 
 
-def main():
-    os.system("clear")
+def init_pydetective(args: argparse.Namespace) -> Profile:
 
     init_logger()
+    logging.info("Initializing PyDetective")
     is_system_platform_supported()
 
-    analysis_timestamp = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-
-    args = parse_arguments()
-
-    if not args.quiet:
-        banner()
-
-    terminal_size = os.get_terminal_size()
-
-    print('-' * terminal_size.columns)
     if is_valid_file(args.config, "yaml"):
-        print(f"[{time.strftime('%H:%M:%S')}] [INFO] Loading configuration file '{args.config}' ...")
         logging.info(f"Loading configuration file '{args.config}'")
+        if not args.quiet:
+            print(f"[{time.strftime('%H:%M:%S')}] [INFO] Loading configuration file '{args.config}'...")
         config = load_config(args.config)
         profile = Profile(config)
 
-    print('-' * terminal_size.columns)
-    print(f"[{time.strftime('%H:%M:%S')}] [INFO] Verifying required directory structure ...")
+        profile.analysis_timestamp = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        profile.terminal_size = os.get_terminal_size()
+        profile.package_name = args.package_name
+
     logging.info("Verifying required directory structure")
+    if not args.quiet:
+        print(f"[{time.strftime('%H:%M:%S')}] [INFO] Verifying required directory structure...")
     check_required_structure(profile)
-    print('-' * terminal_size.columns)
+
+    profile.docker_client = docker.from_env()
+    logging.info("Compiling detection rules")
+    if not args.quiet:
+        print(f"[{time.strftime('%H:%M:%S')}] [INFO] Compiling detection rules...")
+    profile.static_analyzer = analysis.StaticAnalyzer(profile.static_rules_folder_path)
+    logging.info("Starting analysis")
+    if not args.quiet:
+        print(f"[{time.strftime('%H:%M:%S')}] [INFO] Everything is ready, starting analysis...")
+    print('-' * profile.terminal_size.columns)
+
+    return profile
+
+
+def main():
+
+    os.system("clear")
+    args = parse_arguments()
+    if not args.quiet:
+        banner()
+    profile = init_pydetective(args)
+
     
-    # Program logic goes here
+    if is_local_package(profile.package_name):
+        package_path = profile.package_name
+    else:
+        try:
+            package_path = containers.download_package(profile.package_name, profile.sandbox_folder_path, profile.downloaded_package_path)
+        except Exception as e:
+            print(f"[{time.strftime('%H:%M:%S')}] [ERROR] Failed to download package '{profile.package_name}': {e}")
+            logging.error(f"Failed to download package '{profile.package_name}': {e}")
+            print("\nExiting program ...\n")
+            sys.exit(1)
+    print(package_path)
+    runner.analyze_package(profile, "sandbox/sample_malicious_package", secure_mode=False)
+    # TODO add evaluation of the results
+    # TODO add installation of the package
+    # TODO delete the downloaded package
+    containers.delete_package(profile.sandbox_folder_path, profile.downloaded_package_path)
 
 
-    client = docker.from_env()
-    containers.download_package("name", profile.output_folder_path, profile.downloaded_package_path)
-    runner.analyze_package(client, profile, "sandbox/sample_malicious_package", secure_mode=False)
-        
 
-
-
-    print('-' * terminal_size.columns)
+    print('-' * profile.terminal_size.columns)
     print(f"\n[{time.strftime('%H:%M:%S')}] [INFO] All done. Exiting program ...\n")
     logging.info("All done. Exiting program")
 

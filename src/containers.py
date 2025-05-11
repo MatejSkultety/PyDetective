@@ -154,10 +154,7 @@ def download_package(package_name: str, destination_path: str, downloaded_dir_na
         downloaded_dir_name (str): The name of the directory where the package will be extracted.
         
     Returns:
-        str: The name of the extracted folder.
-
-    Raises:
-        Exception: If the download or extraction fails.
+        str: Path to the extracted package folder.
     """
 
     # Download the package
@@ -167,10 +164,9 @@ def download_package(package_name: str, destination_path: str, downloaded_dir_na
         downloader.wait()
         tar_files = [f for f in os.listdir(destination_path) if f.endswith(".tar.gz")]
         if not tar_files:
-            # TODO need to check if it's local package
-            return None
+            raise Exception("Package wasn't downloaded successfully.")
         if len(tar_files) > 1:
-            raise Exception(f"Multiple tar files found in the destination directory: {len(tar_files)}")
+            raise Exception(f"Multiple packages found in the destination directory: {len(tar_files)}")
         tar_file_path = os.path.join(destination_path, tar_files[0])
     except Exception as e:
         raise Exception(f"Failed to download package: {e}")
@@ -193,19 +189,20 @@ def download_package(package_name: str, destination_path: str, downloaded_dir_na
             os.remove(tar_file_path)
         raise Exception(f"Failed to extract package: {e}")
 
-
-def delete_package(package_path: str) -> None:
+def delete_package(package_folder_path: str, package_name: str) -> None:
     """
     Deletes the specified package directory.
 
     Args:
-        package_path (str): The path to the package directory to delete.
+        package_folder_path (str): The path to the folder where the package is downloaded.
+        package_name (str): The name of the package to delete.
 
     Returns:
         None
     """
-    if os.path.exists(package_path):
+    delete_path = os.path.join(package_folder_path, package_name)
+    if os.path.exists(delete_path):
         try:
-            shutil.rmtree(package_path)
+            shutil.rmtree(delete_path)
         except Exception as e:
             print(f"Error deleting package: {e}")

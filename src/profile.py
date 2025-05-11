@@ -4,10 +4,15 @@ import sys
 
 
 class Profile:
+
+
+
+
     def __init__(self, config):
         self.file_paths = config.get('file_paths')
         if self.file_paths:
             # Load all file paths from the configuration
+            self.installation_script = self.file_paths.get('installation_script')
             self.rules_folder_path = self.file_paths.get('rules_folder_path')
             self.static_rules_folder_path = self.file_paths.get('static_rules_folder_path')
             self.dynamic_rules_folder_path = self.file_paths.get('dynamic_rules_folder_path')
@@ -57,3 +62,10 @@ class Profile:
             logging.error(f"Container configurations are not present in the configuration file")
             print("\nExiting program ...\n")
             sys.exit(1)
+
+        self.docker_client = None
+        self.static_analyzer = None
+
+        self.package_name = None
+        self.terminal_size = None
+        self.analysis_timestamp = None

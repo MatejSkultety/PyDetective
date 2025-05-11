@@ -3,6 +3,7 @@ containers:
   image_tag: pydetective_sandbox_container:latest
 
 file_paths:
+  installation_script: setup.sh
   rules_folder_path: rules
   static_rules_folder_path: rules/static_rules
   dynamic_rules_folder_path: rules/dynamic_rules
