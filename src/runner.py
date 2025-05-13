@@ -24,27 +24,15 @@ def analyze_package(profile: profile.Profile, secure_mode: bool = False) -> None
     # TODO evaluate and if dangerous, stop the process
 
     containers.build_sandbox_image(profile.docker_client, profile.sandbox_folder_path, profile.image_tag)
-    sandbox_container = containers.create_sandbox_container(profile.docker_client, profile.image_name, secure_mode)
-    containers.copy_package_to_container(sandbox_container, profile.archives_path, profile.container_dir_path)
-    
-    
-    
-    sandbox_container.start()
-    sandbox_container.wait()
-    containers.get_logs_from_container(sandbox_container)
-
-
-
-
+    sandbox_container = containers.create_sandbox_container(profile.docker_client, profile.image_name, secure_mode)    
     # Start network and syscall scans
     sysdig_process = scanning.scan_syscalls(sandbox_container, profile.syscalls_output_path)
+    containers.copy_package_to_container(sandbox_container, profile.archives_path, profile.container_dir_path)
     sandbox_container.start()
-    sandbox_container.pause()
     tcpdump_container = scanning.scan_network(profile.docker_client, sandbox_container, profile.network_output_path)
-
-    sandbox_container.unpause()
+    
     sandbox_container.wait()
-
+    containers.get_logs_from_container(sandbox_container, profile.logging_path, True) # TODO true z profile.verbose
     scanning.stop_network_scan(tcpdump_container, profile.network_output_path)
     sysdig_process.kill()
 
