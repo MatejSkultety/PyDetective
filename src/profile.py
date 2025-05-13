@@ -28,6 +28,8 @@ class Profile:
             self.sandbox_folder_path = self.file_paths.get('sandbox_folder_path')
             self.sample_package_path = self.file_paths.get('sample_package_path')
             self.downloaded_package_path = self.file_paths.get('downloaded_package_path')
+            self.archives_path = self.file_paths.get('archives_path')
+            self.extracted_path = self.file_paths.get('extracted_path')
             self.falco_config_path = self.file_paths.get('falco_config_path')
             self.container_dir_path = self.file_paths.get('container_dir_path')
             self.pypi_projects_dependency_path = self.file_paths.get('pypi_projects_dependency_path')

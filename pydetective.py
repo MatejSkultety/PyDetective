@@ -74,6 +74,7 @@ def check_required_structure(profile):
     base_relative_path = os.path.dirname(os.path.realpath(sys.argv[0]))
     out_dir = os.path.join(base_relative_path, profile.output_folder_path)
     sandbox_dir = os.path.join(base_relative_path, profile.sandbox_folder_path)
+    downloaded_package_dir = os.path.join(base_relative_path, profile.downloaded_package_path)
     src_dir = os.path.join(base_relative_path, profile.src_folder_path)
     config_dir = os.path.join(base_relative_path, profile.config_folder_path)
     rules_dir = os.path.join(base_relative_path, profile.rules_folder_path)
@@ -81,6 +82,11 @@ def check_required_structure(profile):
     dynamic_rules_dir = os.path.join(base_relative_path, profile.dynamic_rules_folder_path)
 
     installation_script = os.path.join(base_relative_path, profile.installation_script)
+
+    if not os.path.isdir(downloaded_package_dir):
+        print(f"[{time.strftime('%H:%M:%S')}] [INFO] Creating '{downloaded_package_dir}' for temporary storage of package files ...")
+        logging.info(f"Creating '{downloaded_package_dir}' for temporary storage of package files")
+        os.mkdir(downloaded_package_dir)
 
     if not os.path.isdir(out_dir):
         print(f"[{time.strftime('%H:%M:%S')}] [INFO] Creating '{out_dir}' for storing analysis output files ...")
@@ -249,25 +255,29 @@ def main():
         banner()
     profile = init_pydetective(args)
 
-    
-    if is_local_package(profile.package_name):
-        package_path = profile.package_name
-    else:
-        try:
-            package_path = containers.download_package(profile.package_name, profile.sandbox_folder_path, profile.downloaded_package_path)
-        except Exception as e:
-            print(f"[{time.strftime('%H:%M:%S')}] [ERROR] Failed to download package '{profile.package_name}': {e}")
-            logging.error(f"Failed to download package '{profile.package_name}': {e}")
-            print("\nExiting program ...\n")
-            sys.exit(1)
-    print(package_path)
-    runner.analyze_package(profile, "sandbox/sample_malicious_package", secure_mode=False)
-    # TODO add evaluation of the results
-    # TODO add installation of the package
-    # TODO delete the downloaded package
-    containers.delete_package(profile.sandbox_folder_path, profile.downloaded_package_path)
+    # local_package = is_local_package(profile.package_name)
+    # if local_package:
+    #     package_path = profile.package_name
+    # else:
+    #     try:
+    #         package_path = containers.download_package(profile.package_name, profile.sandbox_folder_path, profile.downloaded_package_path)
+    #     except Exception as e:
+    #         print(f"[{time.strftime('%H:%M:%S')}] [ERROR] Failed to download package '{profile.package_name}': {e}")
+    #         logging.error(f"Failed to download package '{profile.package_name}': {e}")
+    #         print("\nExiting program ...\n")
+    #         sys.exit(1)
+    # runner.analyze_package(profile, "sandbox/sample_malicious_package", secure_mode=False)
+    # # TODO add evaluation of the results
 
 
+    # if args.install and True:
+    #     runner.install_package_on_host(profile, package_path)
+
+    # if not local_package:
+    #     containers.delete_package(profile.sandbox_folder_path, profile.downloaded_package_path)
+
+    package_path = containers.download_package(profile)
+    runner.analyze_package(profile, secure_mode=args.secure)
 
     print('-' * profile.terminal_size.columns)
     print(f"\n[{time.strftime('%H:%M:%S')}] [INFO] All done. Exiting program ...\n")
