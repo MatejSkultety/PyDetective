@@ -1,9 +1,12 @@
 import docker
 import tarfile
+import zipfile
 from io import BytesIO
 import subprocess
 import os
 import shutil
+
+from . import profile
 
 
 def build_sandbox_image(client: docker.client, build_path: str, image_tag: str) -> docker.models.images.Image:
@@ -29,24 +32,24 @@ def build_sandbox_image(client: docker.client, build_path: str, image_tag: str) 
     return sandbox_image
 
 
-def create_docker_command(package_path: str) -> list[str]:
+def create_docker_command() -> list[str]:
     """
     Create a Docker command to run a container with the specified package.
 
     Args:
-        package_path (str): The path to the package to be installed.
-
+        None
+    
     Returns:
         list[str]: The command to run the Docker container.
     """
-    _, file_name = package_path.rsplit("/", 1)
     # TODO add options and checks
-    cmd = ["sh", "-c", f"pip install --no-cache-dir --break-system-packages ./{file_name} && ls /app"]
+    # cmd = ["sh", "-c", f"pip install --no-cache-dir --break-system-packages ./{file_name} && ls /app"]
+    cmd = ['sh', '-c', 'ls /app/archives']
     print("PyDetective debug: Docker command: ", cmd)
     return cmd
 
 
-def create_sandbox_container(client: docker.client, image_name: str, package_path: str, secure_mode: bool = False) -> docker.models.containers.Container:
+def create_sandbox_container(client: docker.client, image_name: str, secure_mode: bool = False) -> docker.models.containers.Container:
     """
     Create a Docker container for the sandbox environment.
     The container is based on the image specified by `image_name`.
@@ -55,13 +58,12 @@ def create_sandbox_container(client: docker.client, image_name: str, package_pat
     Args:
         client (docker.client): The Docker client instance.
         image_name (str): The name of the Docker image to use.
-        package_path (str): The path to the package to be installed.
         secure_mode (bool): Flag to indicate if secure mode is enabled. Defaults to False.
 
     Returns:
         docker.models.containers.Container: The created Docker container.
     """
-    cmd = create_docker_command(package_path)
+    cmd = create_docker_command()
     sandbox_container = client.containers.create(
         image_name,
         stdin_open=True,
@@ -144,63 +146,67 @@ def get_logs_from_container(sandbox_container: docker.models.containers.Containe
         print(logs.decode("utf-8"))
 
 
-def download_package(package_name: str, destination_path: str, downloaded_dir_name: str) -> str:
+def download_package(profile: profile.Profile) -> str:
     """
     Downloads a Python package using `pip download`, extracts it, and returns the name of the extracted folder.
 
     Args:
-        package_name (str): The name of the package to download.
-        destination_path (str): The directory where the package will be downloaded and extracted.
-        downloaded_dir_name (str): The name of the directory where the package will be extracted.
+        profile (profile.Profile): The profile instance containing configuration.
         
     Returns:
         str: Path to the extracted package folder.
     """
+    # Make sure the destination is clean
+    delete_package(profile.archives_path)
+    delete_package(profile.extracted_path)
 
-    # Download the package
     try:
-        os.makedirs(destination_path, exist_ok=True)
-        downloader = subprocess.Popen(f"pip download -d {destination_path} {package_name}", shell=True, stdout=subprocess.PIPE)
+        os.makedirs(profile.downloaded_package_path, exist_ok=True)
+        downloader = subprocess.Popen(f"pip download -d {profile.archives_path} {profile.package_name}", shell=True, stdout=subprocess.PIPE)
         downloader.wait()
-        tar_files = [f for f in os.listdir(destination_path) if f.endswith(".tar.gz")]
-        if not tar_files:
-            raise Exception("Package wasn't downloaded successfully.")
-        if len(tar_files) > 1:
-            raise Exception(f"Multiple packages found in the destination directory: {len(tar_files)}")
-        tar_file_path = os.path.join(destination_path, tar_files[0])
+
     except Exception as e:
         raise Exception(f"Failed to download package: {e}")
     
-    # Extract the package
-    try:
-        with tarfile.open(tar_file_path, "r:gz") as tar:
-            tar.extractall(path=destination_path)
-            extracted_folder_name = tar.getnames()[0]
+    extract_package(profile.archives_path, profile.extracted_path)
 
-        extracted_folder_path = os.path.join(destination_path, extracted_folder_name)
-        renamed_folder_path = os.path.join(destination_path, downloaded_dir_name)
-        if os.path.exists(renamed_folder_path):
-            shutil.rmtree(renamed_folder_path)  # Remove existing folder if it exists
-        os.rename(extracted_folder_path, renamed_folder_path)
-        os.remove(tar_file_path)    # Clean up
-        return os.path.join(destination_path, extracted_folder_name)
-    except Exception as e:
-        if tar_file_path and os.path.exists(tar_file_path):
-            os.remove(tar_file_path)
-        raise Exception(f"Failed to extract package: {e}")
 
-def delete_package(package_folder_path: str, package_name: str) -> None:
+def extract_package(archives_path: str, extraction_path: str) -> None:
+
+        archives = [f for f in os.listdir(archives_path)]
+        if not archives:
+            raise Exception("Package wasn't downloaded successfully.")
+
+        for archive in archives:
+            archive_path = os.path.join(archives_path, archive)
+            if archive.endswith(".whl") or archive.endswith(".zip"):
+                try:
+                    with zipfile.ZipFile(archive_path, 'r') as zip_ref:
+                        zip_ref.extractall(extraction_path)
+                except Exception as e:
+                    if archive_path and os.path.exists(archive_path):
+                        os.remove(archive_path)
+                    raise Exception(f"Failed to extract zip package: {e}")
+            else:    
+                try:
+                    with tarfile.open(archive_path) as tar_ref:
+                        tar_ref.extractall(path=extraction_path)
+                except Exception as e:
+                    if archive_path and os.path.exists(archive_path):
+                        os.remove(archive_path)
+                    raise Exception(f"Failed to extract tar package: {e}")
+
+
+def delete_package(delete_path: str) -> None:
     """
     Deletes the specified package directory.
 
     Args:
-        package_folder_path (str): The path to the folder where the package is downloaded.
-        package_name (str): The name of the package to delete.
+        delete_path (str): The path to the package directory to be deleted.
 
     Returns:
         None
     """
-    delete_path = os.path.join(package_folder_path, package_name)
     if os.path.exists(delete_path):
         try:
             shutil.rmtree(delete_path)
