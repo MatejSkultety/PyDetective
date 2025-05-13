@@ -289,16 +289,13 @@ def main():
 
 
         local_package = is_local_package(profile.package_name)
-        if local_package:
-            package_path = profile.package_name
-        else:
-            try:
-                package_path = containers.download_package(profile)
-            except Exception as e:
-                print(f"[{time.strftime('%H:%M:%S')}] [ERROR] Failed to download package '{profile.package_name}': {e}")
-                logging.error(f"Failed to download package '{profile.package_name}': {e}")
-                print("\nExiting program ...\n")
-                sys.exit(1)
+        try:
+            package_path = containers.download_package(profile, local_package)
+        except Exception as e:
+            print(f"[{time.strftime('%H:%M:%S')}] [ERROR] Failed to download package '{profile.package_name}': {e}")
+            logging.error(f"Failed to download package '{profile.package_name}': {e}")
+            print("\nExiting program ...\n")
+            sys.exit(1)
 
         runner.analyze_package(profile, secure_mode=False)
         # TODO add evaluation of the results
@@ -307,7 +304,7 @@ def main():
         if args.install and True:
             runner.install_package_on_host(package_path, local_package)
 
-        if not local_package and not args.keep_files:
+        if not args.keep_files:
             containers.delete_package(profile.downloaded_package_path)
 
 

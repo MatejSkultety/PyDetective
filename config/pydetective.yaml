@@ -7,7 +7,7 @@ file_paths:
   rules_folder_path: rules
   static_rules_folder_path: rules/static_rules
   dynamic_rules_folder_path: rules/dynamic_rules
-  logs_folder_path: logs
+  logging_path: logs/pydetective.log
   output_folder_path: out
   static_result_path: out/static_result.json
   syscalls_result_path: out/syscalls_result.json
@@ -20,7 +20,9 @@ file_paths:
   sample_package_path: sandbox/sample_malicious_package
   downloaded_package_path: sandbox/downloaded_package
   archives_path: sandbox/downloaded_package/archives
+  archives_local_path: sandbox/downloaded_package/archives/package
   extracted_path: sandbox/downloaded_package/extracted
+  extracted_local_path: sandbox/downloaded_package/extracted/package
   falco_config_path: config/falco.yaml
   container_dir_path: /app
   pypi_projects_dependency_path: pyproject.toml

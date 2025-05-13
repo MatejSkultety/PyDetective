@@ -10,9 +10,10 @@ class Profile:
 
     def __init__(self, config, args):
 
+        self.args = args
         self.docker_client = None
         self.static_analyzer = None
-        self.args = args
+        self.package_name = None
 
         self.file_paths = config.get('file_paths')
         if self.file_paths:
@@ -34,7 +35,9 @@ class Profile:
             self.sample_package_path = self.file_paths.get('sample_package_path')
             self.downloaded_package_path = self.file_paths.get('downloaded_package_path')
             self.archives_path = self.file_paths.get('archives_path')
+            self.archives_local_path = self.file_paths.get('archives_local_path')
             self.extracted_path = self.file_paths.get('extracted_path')
+            self.extracted_local_path = self.file_paths.get('extracted_local_path')
             self.falco_config_path = self.file_paths.get('falco_config_path')
             self.container_dir_path = self.file_paths.get('container_dir_path')
             self.pypi_projects_dependency_path = self.file_paths.get('pypi_projects_dependency_path')
