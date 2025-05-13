@@ -46,6 +46,8 @@ def create_docker_command(deep_analysis: bool) -> list[str]:
     # command = ["sh", "-c", f"pip install --no-cache-dir --break-system-packages ./{file_name} && ls /app"]
     # command = ['sh', '-c', 'ls /app/archives']
     command = ["python3", "/app/executor.py"]
+    if deep_analysis:
+        command.append("-d")
     print("PyDetective debug: Docker command: ", command)
     return command
 

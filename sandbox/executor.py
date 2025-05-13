@@ -1,6 +1,7 @@
 import os
 import subprocess
 import time
+import argparse
 
 
 ARCHIVES_PATH = "/app/archives"
@@ -37,8 +38,14 @@ if __name__ == "__main__":
     This script is intended to run and handle all activities in pydetective sandbox container.
     It waits for the archives path to become valid and then installs all package archives in default path.
     """
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-d', '--deep', action="store_true", help="Scan entire sandbox OS after package installation")
+    args = parser.parse_args()
+
     try:
         install_archives(ARCHIVES_PATH)
+        if args.deep:
+            print(f"[{time.strftime('%H:%M:%S')}] [INFO] [CONTAINER] Deep scan is enabled. Scanning entire sandbox OS ...")
     except Exception as e:
         print(f"[{time.strftime('%H:%M:%S')}] [ERROR] [CONTAINER] {e}")
         exit(1)
