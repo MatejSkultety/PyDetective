@@ -36,7 +36,6 @@ def analyze_package(profile: profile.Profile, secure_mode: bool = False) -> None
 
 
 
-    """
     # Start network and syscall scans
     sysdig_process = scanning.scan_syscalls(sandbox_container, profile.syscalls_output_path)
     sandbox_container.start()
@@ -54,55 +53,45 @@ def analyze_package(profile: profile.Profile, secure_mode: bool = False) -> None
 
     # Analyze syscall artefacts
     syscalls_artefacts = analysis.analyse_syscalls_artefacts(profile.falco_config_path, profile.syscalls_result_path)
-    """
     # Clean up
     sandbox_container.stop()
     sandbox_container.remove(force=True)
 
 
-def install_package_on_host(profile: profile.Profile) -> None:
+def install_package_on_host(archives_path: str, local_package: bool) -> None:
     """
-    Install a package on the host system..
-
-    Args:
-        profile (profile.Profile): The profile instance containing configuration.
-        package_path (str): Path to the package to install.
-
-    Returns:
-        None
-    """
-    print(f"[{time.strftime('%H:%M:%S')}] [INFO] Installing package '{profile.package_name}' on host environment ...")
-    logging.info(f"Installing package '{profile.package_name}' on host environment")
-    try:
-        install_archives(profile.archives_path)
-    except subprocess.CalledProcessError as e:
-        print(f"[{time.strftime('%H:%M:%S')}] [ERROR] Failed to install package '{profile.package_name}': {e}")
-        logging.error(f"Failed to install package '{profile.package_name}': {e}")
-        print("\nExiting program ...\n")
-        sys.exit(1)
-
-
-def install_archives(archives_path: str) -> None:
-    """
-    Install all package archives in the specified folder using pip.
+    Install a package on the host system. It installs all package archives in the specified folder using pip.
     This function assumes that the archives are in a format compatible with pip.
 
     Args:
         archives_path (str): Path to folder containing all package archives.
+        local_package (bool): Flag to indicate if the package is a local package. If True, it will install the package
 
     Returns:
         None
     """
-    archives = [f for f in os.listdir(archives_path)]
-    if not archives:
-        raise Exception("There are no archives to install.")
-
-    for archive in archives:
-        archive_path = os.path.join(archives_path, archive)
-        try:
-            command = f"pip install {archive_path}"
+    print(f"[{time.strftime('%H:%M:%S')}] [INFO] Installing package on host environment ...")
+    logging.info(f"Installing package on host environment")
+    try:
+        if local_package:
+            command = f"pip install {archives_path}"
             installer = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE)
             installer.wait()
-        except subprocess.CalledProcessError as e:
-            print(f"[{time.strftime('%H:%M:%S')}] [ERROR] Failed to install archive '{archive_path}': {e}")
-            logging.error(f"Failed to install package '{archive_path}': {e}")
+        else:
+            archives = [f for f in os.listdir(archives_path)]
+            if not archives:
+                raise Exception("There are no archives to install.")
+            for archive in archives:
+                archive_path = os.path.join(archives_path, archive)
+                try:
+                    command = f"pip install {archive_path}"
+                    installer = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE)
+                    installer.wait()
+                except subprocess.CalledProcessError as e:
+                    print(f"[{time.strftime('%H:%M:%S')}] [ERROR] Failed to install archive '{archive_path}': {e}")
+                    logging.error(f"Failed to install package '{archive_path}': {e}")
+    except Exception as e:
+        print(f"[{time.strftime('%H:%M:%S')}] [ERROR] Failed to install package: {e}")
+        logging.error(f"Failed to install package: {e}")
+        print("\nExiting program ...\n")
+        sys.exit(1)

@@ -149,27 +149,24 @@ def get_logs_from_container(sandbox_container: docker.models.containers.Containe
 
 def download_package(profile: profile.Profile) -> str:
     """
-    Downloads a Python package using `pip download`, extracts it, and returns the name of the extracted folder.
+    Downloads a Python package using `pip download`, extracts it, and returns the name of the downloaded package folder.
 
     Args:
         profile (profile.Profile): The profile instance containing configuration.
         
     Returns:
-        str: Path to the extracted package folder.
+        str: Path to the downloaded package folder.
     """
     # Make sure the destination is clean
     delete_package(profile.archives_path)
     delete_package(profile.extracted_path)
-
     try:
-        os.makedirs(profile.downloaded_package_path, exist_ok=True)
         downloader = subprocess.Popen(f"pip download -d {profile.archives_path} {profile.package_name}", shell=True, stdout=subprocess.PIPE)
         downloader.wait()
-
     except Exception as e:
         raise Exception(f"Failed to download package: {e}")
-    
     extract_package(profile.archives_path, profile.extracted_path)
+    return profile.archives_path
 
 
 def extract_package(archives_path: str, extraction_path: str) -> None:

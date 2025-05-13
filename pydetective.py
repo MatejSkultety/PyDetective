@@ -209,6 +209,8 @@ def parse_arguments():
                               help="Print more detailed information")
     analysis_group.add_argument('-t', '--test', action='store_true',
                               help="Testing mode, execute analysis of sample package")
+    analysis_group.add_argument('-k', '--keep-files', action='store_true',
+                              help="Don't delete downloaded package files after analysis (sandbox/downloaded_package)")
 
     return parser.parse_args(args=None if sys.argv[1:] else ['--help'])
 
@@ -268,29 +270,26 @@ def main():
         banner()
     profile = init_pydetective(args)
 
-    # local_package = is_local_package(profile.package_name)
-    # if local_package:
-    #     package_path = profile.package_name
-    # else:
-    #     try:
-    #         package_path = containers.download_package(profile.package_name, profile.sandbox_folder_path, profile.downloaded_package_path)
-    #     except Exception as e:
-    #         print(f"[{time.strftime('%H:%M:%S')}] [ERROR] Failed to download package '{profile.package_name}': {e}")
-    #         logging.error(f"Failed to download package '{profile.package_name}': {e}")
-    #         print("\nExiting program ...\n")
-    #         sys.exit(1)
-    # runner.analyze_package(profile, "sandbox/sample_malicious_package", secure_mode=False)
-    # # TODO add evaluation of the results
+    local_package = is_local_package(profile.package_name)
+    if local_package:
+        package_path = profile.package_name
+    else:
+        try:
+            package_path = containers.download_package(profile)
+        except Exception as e:
+            print(f"[{time.strftime('%H:%M:%S')}] [ERROR] Failed to download package '{profile.package_name}': {e}")
+            logging.error(f"Failed to download package '{profile.package_name}': {e}")
+            print("\nExiting program ...\n")
+            sys.exit(1)
+    runner.analyze_package(profile, secure_mode=False)
+    # TODO add evaluation of the results
 
 
-    # if args.install and True:
-    #     runner.install_package_on_host(profile, package_path)
+    if args.install and True:
+        runner.install_package_on_host(package_path, local_package)
 
-    # if not local_package:
-    #     containers.delete_package(profile.sandbox_folder_path, profile.downloaded_package_path)
-
-    package_path = containers.download_package(profile)
-    runner.analyze_package(profile, secure_mode=args.secure)
+    if not local_package and not args.keep_files:
+        containers.delete_package(profile.downloaded_package_path)
 
     print('-' * profile.terminal_size.columns)
     print(f"\n[{time.strftime('%H:%M:%S')}] [INFO] All done. Exiting program ...\n")
