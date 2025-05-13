@@ -80,7 +80,7 @@ def create_syscalls_command(sandbox: docker.models.containers.Container, export_
         filter_string = f"container.name={sandbox.name}" + " and " + " and ".join(filters)
         print (f"PyDetective debug: Sysdig filters: {filter_string}")
 
-    output_format = "%proc.name %proc.cmdline %proc.args %evt.type %evt.info %evt.arg.flags %fd.name"
+    output_format = "%proc.name %proc.cmdline %proc.args %evt.num %evt.dir %evt.type %evt.info %evt.arg.flags %fd.name"
     command = f"sudo sysdig -j -w {export_path} -pc \"{filter_string}\" -p'{output_format}'"
     print(f"PyDetective debug: Sysdig command: {command}")
     return command

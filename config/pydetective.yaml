@@ -31,14 +31,17 @@ file_paths:
 
 ignored_ips:
   - 1.2.3.
-  - kokot
 
 ignored_domains:
   - pypi.org
   - files.pythonhosted.org
   - dualstack.python.map.fastly.net
+
 ignored_syscalls:
-  - not (fd.name contains '/etc/shadow')
+
+  # deep scan calls
+  # - not (fd.name contains '/etc/shadow')
+  # - not (fd.name contains '/usr/local/lib/python3')
 
 enrichment_services:
   abuseipdb: False
