@@ -32,6 +32,18 @@ def is_system_platform_supported():
         sys.exit(1)
 
 
+def is_root():
+    """
+    Checks if the script is running as root (UID 0).
+    Exits the program if not running as root.
+    """
+    if os.geteuid() != 0:
+        print(f"\n[{time.strftime('%H:%M:%S')}] [CRITICAL] This application must be run as root (sudo privileges required).")
+        logging.critical("Application not run as root (sudo required).")
+        print("\nExiting ...\n")
+        sys.exit(1)
+
+
 def is_valid_file(filename, filetype):
     if not os.path.exists(filename):
         print(
@@ -217,6 +229,7 @@ def init_pydetective(args: argparse.Namespace) -> Profile:
     init_logger()
     logging.info("Initializing PyDetective")
     is_system_platform_supported()
+    is_root()
 
     if is_valid_file(args.config, "yaml"):
         logging.info(f"Loading configuration file '{args.config}'")
