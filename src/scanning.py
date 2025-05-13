@@ -75,16 +75,19 @@ def create_syscalls_command(sandbox: docker.models.containers.Container, export_
         list[str]: The command to run sysdig.
     """
     if not filters or len(filters) == 0:
-        filter_string = ""
+        filter_string = f"container.name={sandbox.name}"
     else:
-        filter_string = "and " + " and ".join(filters) + " "
+        filter_string = f"container.name={sandbox.name}" + " and " + " and ".join(filters)
         print (f"PyDetective debug: Sysdig filters: {filter_string}")
 
     output_format = "%proc.name %proc.cmdline %proc.args %evt.type %evt.info %evt.arg.flags %fd.name"
-    command = [f"sudo sysdig -j -w {export_path} -pc container.name={sandbox.name} {filter_string} -p'{output_format}'"]
+    command = f"sudo sysdig -j -w {export_path} -pc \"{filter_string}\" -p'{output_format}'"
     print(f"PyDetective debug: Sysdig command: {command}")
-
     return command
+
+# sudo sysdig -pc "container.name=zealous_meninsky and not (fd.name contains '/lib/x86_64')" -p'%proc.name %proc.cmdline %proc.args %evt.type %evt.info %evt.arg.flags %fd.name'
+
+
 
 
 def scan_syscalls(sandbox: docker.models.containers.Container, export_path: str, filters: list[str] = None) -> subprocess.Popen:
@@ -101,5 +104,4 @@ def scan_syscalls(sandbox: docker.models.containers.Container, export_path: str,
     """
     command = create_syscalls_command(sandbox, export_path, filters)
     process = subprocess.Popen(command, shell=True)
-
     return process
