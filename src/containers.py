@@ -127,23 +127,23 @@ def copy_package_to_container(container: docker.models.containers.Container, sou
         print(f"Unexpected error: {e}")
 
 
-def get_logs_from_container(sandbox_container: docker.models.containers.Container, destination_path: str = None) -> None:
+def get_logs_from_container(sandbox_container: docker.models.containers.Container, destination_path: str, verbose: bool) -> None:
     """
     Attach to the logs of a Docker container and print them to the console or save them to a file.
     The logs are streamed in real-time.
 
     Args:
         sandbox_container (docker.models.containers.Container): The Docker container instance.
-        destination_path (str, optional): The path to the file where the logs will be saved. If None, logs are printed to the console.
+        destination_path (str): The path to the file where logs will be saved.
+        verbose (bool): Flag to indicate if verbose logging is enabled. If True, logs are printed to the console.
 
     Returns:
         None
     """
     logs = sandbox_container.logs()
-    if destination_path:
-        with open(destination_path, "a") as log_file:
-            log_file.write(logs.decode("utf-8"))
-    else:
+    with open(destination_path, "a") as log_file:
+        log_file.write(logs.decode("utf-8"))
+    if verbose:
         print(logs.decode("utf-8"))
 
 

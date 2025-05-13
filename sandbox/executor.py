@@ -16,10 +16,10 @@ def wait_for_archives_path(archives_path: str) -> None:
     Returns:
         None
     """
-    print(f"[{time.strftime('%H:%M:%S')}] [INFO] Waiting for archives path '{archives_path}' to become valid...")
+    print(f"[{time.strftime('%H:%M:%S')}] [INFO] [CONTAINER] Waiting for archives path '{archives_path}' to become valid...")
     while not os.path.exists(archives_path):
         time.sleep(0.001)
-    print(f"[{time.strftime('%H:%M:%S')}] [INFO] Archives path '{archives_path}' is now valid.")
+    print(f"[{time.strftime('%H:%M:%S')}] [INFO] [CONTAINER] Archives path '{archives_path}' is now valid.")
 
 
 def install_archives(archives_path: str) -> None:
@@ -40,12 +40,12 @@ def install_archives(archives_path: str) -> None:
         archive_path = os.path.join(archives_path, archive)
         try:
             command = f"pip install --no-cache-dir --break-system-packages {archive_path}"
-            print(f"[{time.strftime('%H:%M:%S')}] [INFO] Installing archive '{archive_path}'...")
-            installer = subprocess.run(command, shell=True, check=True, stdout=subprocess.PIPE)
+            print(f"[{time.strftime('%H:%M:%S')}] [INFO] [CONTAINER] Installing archive '{archive_path}'...")
+            installer = subprocess.Popen(command, shell=True)
             installer.wait()
-            print(f"[{time.strftime('%H:%M:%S')}] [INFO] Successfully installed '{archive_path}'.")
+            print(f"[{time.strftime('%H:%M:%S')}] [INFO] [CONTAINER] Successfully installed '{archive_path}'.")
         except subprocess.CalledProcessError as e:
-            print(f"[{time.strftime('%H:%M:%S')}] [ERROR] Failed to install archive '{archive_path}': {e}")
+            print(f"[{time.strftime('%H:%M:%S')}] [ERROR] [CONTAINER] Failed to install archive '{archive_path}': {e}")
 
 
 if __name__ == "__main__":
@@ -57,6 +57,6 @@ if __name__ == "__main__":
         wait_for_archives_path(ARCHIVES_PATH)
         install_archives(ARCHIVES_PATH)
     except Exception as e:
-        print(f"[{time.strftime('%H:%M:%S')}] [ERROR] {e}")
+        print(f"[{time.strftime('%H:%M:%S')}] [ERROR] [CONTAINER] {e}")
         exit(1)
-    print(f"[{time.strftime('%H:%M:%S')}] [INFO] Analysis finished successfully.")
+    print(f"[{time.strftime('%H:%M:%S')}] [INFO] [CONTAINER] Analysis finished successfully.")
