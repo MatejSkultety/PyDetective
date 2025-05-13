@@ -46,16 +46,14 @@ def is_root():
 
 def is_valid_file(filename, filetype):
     if not os.path.exists(filename):
-        print(
-            f"[{time.strftime('%H:%M:%S')}] [ERROR] Provided file '{filename}' does not exist")
+        print(f"[{time.strftime('%H:%M:%S')}] [ERROR] Provided file '{filename}' does not exist")
         logging.error(f"Provided file '{filename}' does not exist")
         print("\nExiting program ...\n")
         sys.exit(1)
     else:
         if filetype == "yaml":
             if not (filename.endswith(".yml") or filename.endswith(".yaml")):
-                print(
-                    f"[{time.strftime('%H:%M:%S')}] [ERROR] Provided file '{filename}' is not a yaml file")
+                print(f"[{time.strftime('%H:%M:%S')}] [ERROR] Provided file '{filename}' is not a yaml file")
                 logging.error(f"Provided file '{filename}' is not a yaml file")
                 print("\nExiting program ...\n")
                 sys.exit(1)
@@ -185,34 +183,44 @@ def arg_formatter():
 
 def parse_arguments():
     parser = argparse.ArgumentParser(formatter_class=arg_formatter(), prog='pydetective', description='Tool for detecting dangerous Python packages.')
-
-
-
-    update_group = parser.add_argument_group('required options')
-    # required_args = update_group.add_mutually_exclusive_group(required=True)
-    parser.add_argument('package_name', metavar='PACKAGE',
-                        help='Name of the package to analyze (e.g. "requests") or path to local package (e.g. "path/to/package")')
-  
-    parser.add_argument('-c', '--config', metavar='FILE', default='config/pydetective.yaml',
-                        help="Configuration file (default: 'config/pydetective.yaml')")
-    parser.add_argument('-w', '--write', metavar='FILE', default='out/pydetective_result.json',
-                        help='Write extracted data to a JSON file')
-    parser.add_argument('-q', '--quiet', action='store_true',
-                        help='Do not print banner')
-    
+    exclusive_group = parser.add_mutually_exclusive_group(required=True)
+    exclusive_group.add_argument('package_name', nargs='?', metavar='PACKAGE', help='Name of the package to analyze (e.g. "requests") or path to local package (e.g. "path/to/package") or .txt file with list of packages (e.g. "path/to/requirements.txt")')
+    exclusive_group.add_argument('-t', '--test', action='store_true', help="Testing mode, execute analysis of sample package")
+    parser.add_argument('-c', '--config', metavar='FILE', default='config/pydetective.yaml', help="Configuration file (default: 'config/pydetective.yaml')")
+    details_level_group = parser.add_mutually_exclusive_group()
+    details_level_group.add_argument('-q', '--quiet', action='store_true', help='Do not print banner')
+    details_level_group.add_argument('-v', '--verbose', action='store_true', help='Enable more detailed output')
     analysis_group = parser.add_argument_group('analysis parameters')
-    analysis_group.add_argument('-s', '--secure', action='store_true',
-                            help="Perform more secure analysis (don't execute suspicious files, disable network connection)")
-    analysis_group.add_argument('-i', '--install', action='store_true',
-                            help="After analysis, (if safe) install the package on a host environment")
-    analysis_group.add_argument('-v', '--verbose', action='store_true',
-                              help="Print more detailed information")
-    analysis_group.add_argument('-t', '--test', action='store_true',
-                              help="Testing mode, execute analysis of sample package")
-    analysis_group.add_argument('-k', '--keep-files', action='store_true',
-                              help="Don't delete downloaded package files after analysis (sandbox/downloaded_package)")
-
+    analysis_group.add_argument('-s', '--secure', action='store_true', help="Perform more secure analysis (don't execute suspicious files, disable network connection)")
+    analysis_group.add_argument('-i', '--install', action='store_true', help="After analysis, (if safe) install the package on a host environment")
+    analysis_group.add_argument('-k', '--keep-files', action='store_true', help="Don't delete downloaded package files after analysis (sandbox/downloaded_package)")
+    analysis_group.add_argument('-w', '--write', metavar='FILE', default='out/pydetective_result.json', help='Write extracted data to a JSON file')
     return parser.parse_args(args=None if sys.argv[1:] else ['--help'])
+
+
+def parse_requirements_file(package_arg: str) -> list[str]:
+    """
+    Parses a requirements.txt file and returns a list of package names.
+    """
+    packages = []
+    if package_arg.endswith('.txt'):
+        try:
+            with open(package_arg, 'r') as file:
+                for line in file:
+                    line = line.strip()
+                    if line and not line.startswith('#'):
+                        packages.append(line)
+        except FileNotFoundError:
+            print(f"[{time.strftime('%H:%M:%S')}] [ERROR] The specified requirements file '{package_arg}' does not exist.")
+            logging.error(f"The specified requirements file '{package_arg}' does not exist.")
+            sys.exit(1)
+        except Exception as e:
+            print(f"[{time.strftime('%H:%M:%S')}] [ERROR] An error occurred while reading the requirements file: {e}")
+            logging.error(f"An error occurred while reading the requirements file: {e}")
+            sys.exit(1)
+    else:
+        packages.append(package_arg)
+    return packages
 
 
 def init_logger():
@@ -238,11 +246,15 @@ def init_pydetective(args: argparse.Namespace) -> Profile:
         if not args.quiet:
             print(f"[{time.strftime('%H:%M:%S')}] [INFO] Loading configuration file '{args.config}'...")
         config = load_config(args.config)
-        profile = Profile(config)
+        profile = Profile(config, args)
 
         profile.analysis_timestamp = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         profile.terminal_size = os.get_terminal_size()
-        profile.package_name = args.package_name
+        if args.test:
+            profile.package_name = profile.sample_package_path
+            profile.args.install = False
+        else:
+            profile.package_name = args.package_name
 
     logging.info("Verifying required directory structure")
     if not args.quiet:
@@ -270,26 +282,37 @@ def main():
         banner()
     profile = init_pydetective(args)
 
-    local_package = is_local_package(profile.package_name)
-    if local_package:
-        package_path = profile.package_name
-    else:
-        try:
-            package_path = containers.download_package(profile)
-        except Exception as e:
-            print(f"[{time.strftime('%H:%M:%S')}] [ERROR] Failed to download package '{profile.package_name}': {e}")
-            logging.error(f"Failed to download package '{profile.package_name}': {e}")
-            print("\nExiting program ...\n")
-            sys.exit(1)
-    runner.analyze_package(profile, secure_mode=False)
-    # TODO add evaluation of the results
+    packages_to_analyze = parse_requirements_file(profile.package_name)
+    for package_to_analyze in packages_to_analyze:
+        profile.package_name = package_to_analyze
 
 
-    if args.install and True:
-        runner.install_package_on_host(package_path, local_package)
 
-    if not local_package and not args.keep_files:
-        containers.delete_package(profile.downloaded_package_path)
+        local_package = is_local_package(profile.package_name)
+        if local_package:
+            package_path = profile.package_name
+        else:
+            try:
+                package_path = containers.download_package(profile)
+            except Exception as e:
+                print(f"[{time.strftime('%H:%M:%S')}] [ERROR] Failed to download package '{profile.package_name}': {e}")
+                logging.error(f"Failed to download package '{profile.package_name}': {e}")
+                print("\nExiting program ...\n")
+                sys.exit(1)
+
+        runner.analyze_package(profile, secure_mode=False)
+        # TODO add evaluation of the results
+
+
+        if args.install and True:
+            runner.install_package_on_host(package_path, local_package)
+
+        if not local_package and not args.keep_files:
+            containers.delete_package(profile.downloaded_package_path)
+
+
+
+
 
     print('-' * profile.terminal_size.columns)
     print(f"\n[{time.strftime('%H:%M:%S')}] [INFO] All done. Exiting program ...\n")

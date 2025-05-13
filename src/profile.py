@@ -8,7 +8,12 @@ class Profile:
 
 
 
-    def __init__(self, config):
+    def __init__(self, config, args):
+
+        self.docker_client = None
+        self.static_analyzer = None
+        self.args = args
+
         self.file_paths = config.get('file_paths')
         if self.file_paths:
             # Load all file paths from the configuration
@@ -16,7 +21,7 @@ class Profile:
             self.rules_folder_path = self.file_paths.get('rules_folder_path')
             self.static_rules_folder_path = self.file_paths.get('static_rules_folder_path')
             self.dynamic_rules_folder_path = self.file_paths.get('dynamic_rules_folder_path')
-            self.logs_folder_path = self.file_paths.get('logs_folder_path')
+            self.logging_path = self.file_paths.get('logging_path')
             self.output_folder_path = self.file_paths.get('output_folder_path')
             self.static_result_path = self.file_paths.get('static_result_path')
             self.syscalls_result_path = self.file_paths.get('syscalls_result_path')
@@ -65,9 +70,9 @@ class Profile:
             print("\nExiting program ...\n")
             sys.exit(1)
 
-        self.docker_client = None
-        self.static_analyzer = None
 
-        self.package_name = None
+
         self.terminal_size = None
         self.analysis_timestamp = None
+
+        
