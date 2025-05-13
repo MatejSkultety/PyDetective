@@ -30,8 +30,15 @@ file_paths:
   src_folder_path: src
 
 ignored_ips:
+  - 1.2.3.
+  - kokot
 
 ignored_domains:
+  - pypi.org
+  - files.pythonhosted.org
+  - dualstack.python.map.fastly.net
+ignored_syscalls:
+  - not (fd.name contains '/etc/shadow')
 
 enrichment_services:
   abuseipdb: False

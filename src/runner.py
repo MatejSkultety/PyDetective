@@ -34,7 +34,7 @@ def analyze_package(profile: profile.Profile) -> str:
     containers.build_sandbox_image(profile.docker_client, profile.sandbox_folder_path, profile.image_tag)
     sandbox_container = containers.create_sandbox_container(profile)    
     # Start network and syscall scans
-    sysdig_process = scanning.scan_syscalls(sandbox_container, profile.syscalls_output_path)
+    sysdig_process = scanning.scan_syscalls(sandbox_container, profile.syscalls_output_path, profile.ignored_syscalls)
     containers.copy_package_to_container(sandbox_container, profile.archives_path, profile.container_dir_path)
     sandbox_container.start()
     tcpdump_container = scanning.scan_network(profile.docker_client, sandbox_container, profile.network_output_path)
@@ -49,7 +49,7 @@ def analyze_package(profile: profile.Profile) -> str:
     sandbox_container.remove(force=True)
 
     analysis.analyse_syscalls_artefacts(profile.falco_config_path, profile.syscalls_result_path)
-    analysis.analyse_network_artefacts(profile.network_output_path, profile.network_result_path)
+    analysis.analyse_network_artefacts(profile)
     
     return evaluation.evaluate_package(profile, static_result)
 

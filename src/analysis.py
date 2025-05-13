@@ -5,16 +5,16 @@ import yara
 import os
 from datetime import datetime
 
+from . import profile
 
-def parse_network_artefacts(pcap_file: str, ignored_hosts: list[str] = None, ignored_ips: list[str] = None) -> tuple[set, set]:
+
+def parse_network_artefacts(profile: profile.Profile) -> tuple[set, set]:
     """
     Extracts unique IP addresses, domain and names from a pcap file.
     It uses the pyshark library to read the pcap file and extract relevant information.
 
     Args:
-        pcap_file (str): Path to the pcap file.
-        ignored_hosts (list[str], optional): List of hosts to ignore. Defaults to None.
-        ignored_ips (list[str], optional): List of IP addresses to ignore. Defaults to None.
+        profile (profile.Profile): The profile instance containing configuration.
 
     Returns:
         tuple: A tuple containing two sets:
@@ -24,48 +24,51 @@ def parse_network_artefacts(pcap_file: str, ignored_hosts: list[str] = None, ign
     ip_addresses = set()
     domain_names = set()
 
-    cap = pyshark.FileCapture(pcap_file, display_filter='dns or ip')
+    cap = pyshark.FileCapture(profile.network_output_path, display_filter='dns or ip')
     for packet in cap:
         if 'IP' in packet:
             src_ip = packet.ip.src
             dst_ip = packet.ip.dst
-            if ignored_ips and not (src_ip in ignored_ips):
+            if src_ip not in profile.ignored_ips:
                 ip_addresses.add(src_ip)
-            if ignored_ips and not (dst_ip in ignored_ips):
+            if dst_ip not in profile.ignored_ips:
                 ip_addresses.add(dst_ip)
         if 'DNS' in packet:
             if hasattr(packet.dns, 'qry_name'):
-                domain_names.add(packet.dns.qry_name)
+                domain = packet.dns.qry_name
+                if domain not in profile.ignored_domains:
+                    domain_names.add(domain)
             if hasattr(packet.dns, 'cname') and packet.dns.cname:
-                domain_names.add(packet.dns.cname)
+                cname = packet.dns.cname
+                if cname not in profile.ignored_domains:
+                    domain_names.add(cname)
             # Check for A and AAAA records (IPv4/IPv6) in DNS responses
-            if hasattr(packet.dns, 'a') and packet.dns.a:  # A record (IPv4)
-                ip_addresses.add(packet.dns.a)
-            if hasattr(packet.dns, 'aaaa') and packet.dns.aaaa:  # AAAA record (IPv6)
-                ip_addresses.add(packet.dns.aaaa)
+            if hasattr(packet.dns, 'a') and packet.dns.a:
+                if packet.dns.a not in profile.ignored_ips:
+                    ip_addresses.add(packet.dns.a)
+            if hasattr(packet.dns, 'aaaa') and packet.dns.aaaa:
+                if packet.dns.aaaa not in profile.ignored_ips:
+                    ip_addresses.add(packet.dns.aaaa)
     cap.close()
     return ip_addresses, domain_names
 
 
-def analyse_network_artefacts(pcap_file: str, export_path: str, ignored_hosts: list[str] = None, ignored_ips: list[str] = None) -> None:
+def analyse_network_artefacts(profile: profile.Profile) -> None:
     """
     Analyze network artefacts from a pcap file and export the results to a JSON file.
 
     Args:
-        pcap_file (str): Path to the pcap file.
-        export_path (str): Path to the file where the analysis results will be saved.
-        ignored_hosts (list[str], optional): List of hosts to ignore. Defaults to None.
-        ignored_ips (list[str], optional): List of IP addresses to ignore. Defaults to None.
+        profile (profile.Profile): The profile instance containing configuration.
 
     Returns:
         None
     """
-    ip_addresses, domain_names = parse_network_artefacts(pcap_file, ignored_hosts, ignored_ips)
+    ip_addresses, domain_names = parse_network_artefacts(profile)
     result = {
         'ip_addresses': list(ip_addresses),
         'domain_names': list(domain_names)
     }
-    with open(export_path, 'w') as f:
+    with open(profile.network_result_path, 'w') as f:
         json.dump(result, f, indent=4)
 
 

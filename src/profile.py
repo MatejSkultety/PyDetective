@@ -73,9 +73,30 @@ class Profile:
             print("\nExiting program ...\n")
             sys.exit(1)
 
+        self.ignored_ips = config.get('ignored_ips')
+        if self.ignored_ips is not None:
+            if not isinstance(self.ignored_ips, list) or not all(isinstance(ip, str) for ip in self.ignored_ips):
+                print(f"[{time.strftime('%H:%M:%S')}] [ERROR] 'ignored_ips' must be a list of strings in the configuration file ...")
+                logging.error(f"'ignored_ips' must be a list of strings in the configuration file")
+                print("\nExiting program ...\n")
+                sys.exit(1)
 
+        self.ignored_domains = config.get('ignored_domains')
+        if self.ignored_domains is not None:
+            if not isinstance(self.ignored_domains, list) or not all(isinstance(domain, str) for domain in self.ignored_domains):
+                print(f"[{time.strftime('%H:%M:%S')}] [ERROR] 'ignored_domains' must be a list of strings in the configuration file ...")
+                logging.error(f"'ignored_domains' must be a list of strings in the configuration file")
+                print("\nExiting program ...\n")
+                sys.exit(1)
+
+        self.ignored_syscalls = config.get('ignored_syscalls')
+        if self.ignored_syscalls is not None:
+            if not isinstance(self.ignored_syscalls, list) or not all(isinstance(syscall, str) for syscall in self.ignored_syscalls):
+                print(f"[{time.strftime('%H:%M:%S')}] [ERROR] 'ignored_syscalls' must be a list of strings in the configuration file ...")
+                logging.error(f"'ignored_syscalls' must be a list of strings in the configuration file")
+                print("\nExiting program ...\n")
+                sys.exit(1)
 
         self.terminal_size = None
         self.analysis_timestamp = None
 
-        
