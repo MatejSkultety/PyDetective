@@ -33,6 +33,23 @@ def install_archives(archives_path: str) -> None:
             print(f"[{time.strftime('%H:%M:%S')}] [ERROR] [CONTAINER] Failed to install archive '{archive_path}': {e}")
 
 
+def scan_sandbox() -> None:
+    """
+    Scan the entire sandbox OS after package installation.
+
+    Args:
+        None
+
+    Returns:
+        None
+    """
+    print(f"[{time.strftime('%H:%M:%S')}] [INFO] [CONTAINER] Scanning entire sandbox OS ...")
+    command = "chkrootkit -q"
+    # subprocess.Popen(command, shell=True).wait()
+    command = "freshclam && clamscan -i -r /"
+    subprocess.Popen(command, shell=True).wait()
+
+
 if __name__ == "__main__":
     """
     This script is intended to run and handle all activities in pydetective sandbox container.
@@ -45,7 +62,7 @@ if __name__ == "__main__":
     try:
         install_archives(ARCHIVES_PATH)
         if args.deep:
-            print(f"[{time.strftime('%H:%M:%S')}] [INFO] [CONTAINER] Deep scan is enabled. Scanning entire sandbox OS ...")
+            scan_sandbox()
     except Exception as e:
         print(f"[{time.strftime('%H:%M:%S')}] [ERROR] [CONTAINER] {e}")
         exit(1)
