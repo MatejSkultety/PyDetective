@@ -47,6 +47,28 @@ def parse_network_artefacts(pcap_file: str, ignored_hosts: list[str] = None, ign
     return ip_addresses, domain_names
 
 
+def analyse_network_artefacts(pcap_file: str, export_path: str, ignored_hosts: list[str] = None, ignored_ips: list[str] = None) -> None:
+    """
+    Analyze network artefacts from a pcap file and export the results to a JSON file.
+
+    Args:
+        pcap_file (str): Path to the pcap file.
+        export_path (str): Path to the file where the analysis results will be saved.
+        ignored_hosts (list[str], optional): List of hosts to ignore. Defaults to None.
+        ignored_ips (list[str], optional): List of IP addresses to ignore. Defaults to None.
+
+    Returns:
+        None
+    """
+    ip_addresses, domain_names = parse_network_artefacts(pcap_file, ignored_hosts, ignored_ips)
+    result = {
+        'ip_addresses': list(ip_addresses),
+        'domain_names': list(domain_names)
+    }
+    with open(export_path, 'w') as f:
+        json.dump(result, f, indent=4)
+
+
 def analyse_syscalls_artefacts(config_path: str, export_path: str) -> None:
     """
     Run Falco to analyze syscalls captured using Sysdig for potentialy malicious behaviour
@@ -183,4 +205,4 @@ class StaticAnalyzer:
             None
         """
         with open(export_path, 'w') as f:
-            json.dump(self.results, f, indent=2)
+            json.dump(self.results, f, indent=4)

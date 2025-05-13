@@ -4,46 +4,54 @@ import time
 import logging
 import os
 
-from . import containers, scanning, analysis, profile
+from . import containers, scanning, analysis, profile, evaluation
+from .evaluation import Verdict
 
 
-def analyze_package(profile: profile.Profile, secure_mode: bool = False) -> None:
+def analyze_package(profile: profile.Profile) -> str:
     """
     Analyze a package by performing network and syscall scans, followed by analysis.
 
     Args:
         profile (profile.Profile): The profile instance containing configuration.
-        secure_mode (bool): Flag to indicate if secure mode is enabled. Defaults to False.
+        secure (bool): Flag to indicate if secure mode is enabled. Defaults to False.
 
     Returns:
-        dict: A dictionary containing the results of the network and syscall analyses.
+        verdict (str): The verdict of the analysis.
     """
     # static__analyzer = analysis.StaticAnalyzer(profile.static_rules_folder_path)
     # static__analyzer.scan_directory(profile.extracted_path, profile.static_result_path)
 
     # TODO evaluate and if dangerous, stop the process
+    profile.static_analyzer.scan_directory(profile.extracted_path, profile.static_result_path)
+    static_result = evaluation.evaluate_static_results(profile.static_result_path)
+
+    if static_result["verdict"] == Verdict.MALICIOUS.value and profile.args.secure:
+        print(f"[{time.strftime('%H:%M:%S')}] [ERROR] Package is detected as MALICIOUS by static analysis. Stopping the process ...")
+        logging.error(f"Package is detected as MALICIOUS by static analysis. Stopping the process ...")
+        return static_result["verdict"]
 
     containers.build_sandbox_image(profile.docker_client, profile.sandbox_folder_path, profile.image_tag)
-    sandbox_container = containers.create_sandbox_container(profile.docker_client, profile.image_name, secure_mode)    
+    sandbox_container = containers.create_sandbox_container(profile)    
     # Start network and syscall scans
     sysdig_process = scanning.scan_syscalls(sandbox_container, profile.syscalls_output_path)
     containers.copy_package_to_container(sandbox_container, profile.archives_path, profile.container_dir_path)
     sandbox_container.start()
     tcpdump_container = scanning.scan_network(profile.docker_client, sandbox_container, profile.network_output_path)
-    
+
     sandbox_container.wait()
     containers.get_logs_from_container(sandbox_container, profile.logging_path, True) # TODO true z profile.verbose
     scanning.stop_network_scan(tcpdump_container, profile.network_output_path)
     sysdig_process.kill()
-
-    # Analyze network artefacts
-    network_artefacts = analysis.parse_network_artefacts(profile.network_output_path)
-
-    # Analyze syscall artefacts
-    syscalls_artefacts = analysis.analyse_syscalls_artefacts(profile.falco_config_path, profile.syscalls_result_path)
-    # Clean up
+    if profile.args.deep:
+        pass
     sandbox_container.stop()
     sandbox_container.remove(force=True)
+
+    analysis.analyse_syscalls_artefacts(profile.falco_config_path, profile.syscalls_result_path)
+    analysis.analyse_network_artefacts(profile.network_output_path, profile.network_result_path)
+    
+    return evaluation.evaluate_package(profile, static_result)
 
 
 def install_package_on_host(archives_path: str, local_package: bool) -> None:

@@ -32,12 +32,12 @@ def build_sandbox_image(client: docker.client, build_path: str, image_tag: str) 
     return sandbox_image
 
 
-def create_docker_command() -> list[str]:
+def create_docker_command(deep_analysis: bool) -> list[str]:
     """
     Create a Docker command to run a container with the specified package.
 
     Args:
-        None
+        deep_analysis (bool): Flag to indicate if deep analysis is enabled.
     
     Returns:
         list[str]: The command to run the Docker container.
@@ -50,28 +50,26 @@ def create_docker_command() -> list[str]:
     return command
 
 
-def create_sandbox_container(client: docker.client, image_name: str, secure_mode: bool = False) -> docker.models.containers.Container:
+def create_sandbox_container(profile: profile.Profile) -> docker.models.containers.Container:
     """
     Create a Docker container for the sandbox environment.
     The container is based on the image specified by `image_name`.
     The container runs a command to install the specified requirements.
 
     Args:
-        client (docker.client): The Docker client instance.
-        image_name (str): The name of the Docker image to use.
-        secure_mode (bool): Flag to indicate if secure mode is enabled. Defaults to False.
+        profile (profile.Profile): The profile instance containing configuration.
 
     Returns:
         docker.models.containers.Container: The created Docker container.
     """
-    command = create_docker_command()
-    sandbox_container = client.containers.create(
-        image_name,
+    command = create_docker_command(profile.args.deep)
+    sandbox_container = profile.docker_client.containers.create(
+        profile.image_name,
         stdin_open=True,
         tty=True,
         detach=True,
         command=command,
-        network_disabled=secure_mode,
+        network_disabled=profile.args.secure,
     )
     print("PyDetective debug: Sandbox container created: ", sandbox_container.id)
     return sandbox_container

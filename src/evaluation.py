@@ -1,16 +1,32 @@
 import json
 from datetime import datetime
 import toml
+from enum import Enum
 
-def evaluate_network_results():
-    pass
+from . import profile
+
+
+class Verdict(Enum):
+    SAFE = "SAFE"
+    DANGEROUS = "DANGEROUS"
+    MALICIOUS = "MALICIOUS"
+
+
+def evaluate_network_results(*args, **kwargs):
+    # Placeholder implementation
+    return {
+        "warnings": 0,
+        "errors": 0,
+        "verdict": Verdict.SAFE.value,
+        "issues": []
+    }
 
 
 def evaluate_syscalls_results(source_path: str) -> dict:
     result = {
         "warnings": 0,
         "errors": 0,
-        "verdict": "SAFE",
+        "verdict": Verdict.SAFE.value,
         "issues": []
     }
 
@@ -18,28 +34,25 @@ def evaluate_syscalls_results(source_path: str) -> dict:
         for line in file:
             try:
                 event = json.loads(line.strip())
-                # Extract specific fields for the event
                 formatted_event = {
                     "priority": event.get("priority", ""),
                     "rule": event.get("rule", ""),
                     "output": event.get("output_fields", {})
                 }
                 result["issues"].append(formatted_event)
-
-                # Update counts based on priority
                 priority = formatted_event["priority"].upper()
                 if priority in ["NOTICE", "INFO", "DEBUG"]:
                     result["warnings"] += 1
                 else:
                     result["errors"] += 1
             except json.JSONDecodeError:
-                print("Invalid JSON line encountered, skipping.")
-
-    # Determine the verdict based on the counts
+                continue
     if result["errors"] > 0:
-        result["verdict"] = "MALICIOUS"
+        result["verdict"] = Verdict.MALICIOUS.value
     elif result["warnings"] > 0:
-        result["verdict"] = "DANGEROUS"
+        result["verdict"] = Verdict.DANGEROUS.value
+    else:
+        result["verdict"] = Verdict.SAFE.value
 
     return result
 
@@ -48,7 +61,7 @@ def evaluate_static_results(source_path: str) -> dict:
     result = {
         "warnings": 0,
         "errors": 0,
-        "verdict": "SAFE",
+        "verdict": Verdict.SAFE.value,
         "issues": []
     }
 
@@ -77,24 +90,30 @@ def evaluate_static_results(source_path: str) -> dict:
 
         except json.JSONDecodeError:
             print("Invalid JSON file encountered, skipping.")
-
-    # Determine the verdict based on the counts
     if result["warnings"] > 0:
-        result["verdict"] = "DANGEROUS"
-
+        result["verdict"] = Verdict.DANGEROUS.value
+    else:
+        result["verdict"] = Verdict.SAFE.value
     return result
 
 
-def evaluate_post_install_results():
-    pass
+def evaluate_post_install_results(*args, **kwargs):
+    # Placeholder implementation
+    return {
+        "warnings": 0,
+        "errors": 0,
+        "verdict": Verdict.SAFE.value,
+        "issues": []
+    }
 
 
-def evaluate_package(package_path: str, syscalls_path: str, static_path: str) -> dict:
+def evaluate_package(profile: profile.Profile, static_result: dict = None) -> dict:
     # Call individual evaluation functions
-    network_result = evaluate_network_results()
-    syscalls_result = evaluate_syscalls_results(syscalls_path)
-    static_result = evaluate_static_results(static_path)
-    post_install_result = evaluate_post_install_results()
+    network_result = evaluate_network_results(profile.network_result_path)
+    syscalls_result = evaluate_syscalls_results(profile.syscalls_result_path)
+    if static_result is None:
+        static_result = evaluate_static_results(profile.static_result_path)
+    post_install_result = evaluate_post_install_results(profile.post_install_result_path)
 
     # Aggregate results
     verdicts = set()
@@ -102,16 +121,16 @@ def evaluate_package(package_path: str, syscalls_path: str, static_path: str) ->
     verdicts.add(syscalls_result["verdict"])
     verdicts.add(static_result["verdict"])
     verdicts.add(post_install_result["verdict"])
-    if "MALICIOUS" in verdicts:
-        final_verdict = "MALICIOUS"
-    elif "DANGEROUS" in verdicts:
-        final_verdict = "DANGEROUS"
+    if Verdict.MALICIOUS.value in verdicts:
+        final_verdict = Verdict.MALICIOUS.value
+    elif Verdict.DANGEROUS.value in verdicts:
+        final_verdict = Verdict.DANGEROUS.value
     else:
-        final_verdict = "SAFE"
+        final_verdict = Verdict.SAFE.value
 
     # Create the final result dictionary
     package_evaluation = {
-        "metadata": get_package_metadata_from_pyproject(package_path),
+        "metadata": get_package_metadata_from_pyproject(profile.archives_path),
         "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
         "final_verdict": final_verdict,
         "evaluations": {
@@ -158,8 +177,6 @@ def get_package_metadata_from_pyproject(package_path: str) -> dict:
         }
 
 
-def export_results(evaluation_result: str, export_path: str) -> None:
-
+def export_results(evaluation_result: dict, export_path: str) -> None:
     with open(export_path, "w") as file:
         json.dump(evaluation_result, file, indent=4)
-    

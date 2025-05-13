@@ -9,6 +9,7 @@ import yaml
 import docker
 
 from src.profile import Profile
+from src.evaluation import Verdict
 from src import runner, containers, scanning, analysis
 
 
@@ -299,11 +300,9 @@ def main():
             print("\nExiting program ...\n")
             sys.exit(1)
 
-        verdict = runner.analyze_package(profile, secure_mode=False)
-        # TODO add evaluation of the results
+        verdict = runner.analyze_package(profile)
 
-
-        if args.install and True:
+        if args.install and verdict == Verdict.SAFE.value:
             runner.install_package_on_host(package_path, local_package)
 
         if not args.keep_files:
