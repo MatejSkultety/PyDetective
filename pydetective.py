@@ -186,15 +186,17 @@ def parse_arguments():
     exclusive_group = parser.add_mutually_exclusive_group(required=True)
     exclusive_group.add_argument('package_name', nargs='?', metavar='PACKAGE', help='Name of the package to analyze (e.g. "requests") or path to local package (e.g. "path/to/package") or .txt file with list of packages (e.g. "path/to/requirements.txt")')
     exclusive_group.add_argument('-t', '--test', action='store_true', help="Testing mode, execute analysis of sample package")
+    parser.add_argument('-i', '--install', action='store_true', help="After analysis, (if safe) install the package on a host environment")
+    parser.add_argument('-k', '--keep-files', action='store_true', help="Don't delete downloaded package files after analysis (sandbox/downloaded_package)")
     parser.add_argument('-c', '--config', metavar='FILE', default='config/pydetective.yaml', help="Configuration file (default: 'config/pydetective.yaml')")
     details_level_group = parser.add_mutually_exclusive_group()
     details_level_group.add_argument('-q', '--quiet', action='store_true', help='Do not print banner')
     details_level_group.add_argument('-v', '--verbose', action='store_true', help='Enable more detailed output')
     analysis_group = parser.add_argument_group('analysis parameters')
     analysis_group.add_argument('-s', '--secure', action='store_true', help="Perform more secure analysis (don't execute suspicious files, disable network connection)")
-    analysis_group.add_argument('-i', '--install', action='store_true', help="After analysis, (if safe) install the package on a host environment")
-    analysis_group.add_argument('-k', '--keep-files', action='store_true', help="Don't delete downloaded package files after analysis (sandbox/downloaded_package)")
-    analysis_group.add_argument('-w', '--write', metavar='FILE', default='out/pydetective_result.json', help='Write extracted data to a JSON file')
+    analysis_group.add_argument('-d', '--deep', action='store_true', help="Scan entire sandbox OS after package installation")
+    output_group = parser.add_argument_group('output options')
+    output_group.add_argument('-w', '--write', metavar='FILE', default='out/pydetective_result.json', help='Write extracted data to a JSON file')
     return parser.parse_args(args=None if sys.argv[1:] else ['--help'])
 
 
@@ -297,7 +299,7 @@ def main():
             print("\nExiting program ...\n")
             sys.exit(1)
 
-        runner.analyze_package(profile, secure_mode=False)
+        verdict = runner.analyze_package(profile, secure_mode=False)
         # TODO add evaluation of the results
 
 
