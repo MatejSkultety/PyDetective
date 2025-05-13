@@ -173,29 +173,37 @@ def download_package(profile: profile.Profile) -> str:
 
 
 def extract_package(archives_path: str, extraction_path: str) -> None:
+    """
+    Extracts package archives from the specified path to the extraction path.
 
-        archives = [f for f in os.listdir(archives_path)]
-        if not archives:
-            raise Exception("Package wasn't downloaded successfully.")
+    Args:
+        archives_path (str): Path to the folder containing package archives.
+        extraction_path (str): Path to the folder where the archives will be extracted.
 
-        for archive in archives:
-            archive_path = os.path.join(archives_path, archive)
-            if archive.endswith(".whl") or archive.endswith(".zip"):
-                try:
-                    with zipfile.ZipFile(archive_path, 'r') as zip_ref:
-                        zip_ref.extractall(extraction_path)
-                except Exception as e:
-                    if archive_path and os.path.exists(archive_path):
-                        os.remove(archive_path)
-                    raise Exception(f"Failed to extract zip package: {e}")
-            else:    
-                try:
-                    with tarfile.open(archive_path) as tar_ref:
-                        tar_ref.extractall(path=extraction_path)
-                except Exception as e:
-                    if archive_path and os.path.exists(archive_path):
-                        os.remove(archive_path)
-                    raise Exception(f"Failed to extract tar package: {e}")
+    Returns:
+        None
+    """
+    archives = [f for f in os.listdir(archives_path)]
+    if not archives:
+        raise Exception("Package wasn't downloaded successfully.")
+    for archive in archives:
+        archive_path = os.path.join(archives_path, archive)
+        if archive.endswith(".whl") or archive.endswith(".zip"):
+            try:
+                with zipfile.ZipFile(archive_path, 'r') as zip_ref:
+                    zip_ref.extractall(extraction_path)
+            except Exception as e:
+                if archive_path and os.path.exists(archive_path):
+                    os.remove(archive_path)
+                raise Exception(f"Failed to extract zip package: {e}")
+        else:    
+            try:
+                with tarfile.open(archive_path) as tar_ref:
+                    tar_ref.extractall(path=extraction_path)
+            except Exception as e:
+                if archive_path and os.path.exists(archive_path):
+                    os.remove(archive_path)
+                raise Exception(f"Failed to extract tar package: {e}")
 
 
 def delete_package(delete_path: str) -> None:
