@@ -43,10 +43,11 @@ def create_docker_command() -> list[str]:
         list[str]: The command to run the Docker container.
     """
     # TODO add options and checks
-    # cmd = ["sh", "-c", f"pip install --no-cache-dir --break-system-packages ./{file_name} && ls /app"]
-    cmd = ['sh', '-c', 'ls /app/archives']
-    print("PyDetective debug: Docker command: ", cmd)
-    return cmd
+    # command = ["sh", "-c", f"pip install --no-cache-dir --break-system-packages ./{file_name} && ls /app"]
+    # command = ['sh', '-c', 'ls /app/archives']
+    command = ["python3", "/app/executor.py"]
+    print("PyDetective debug: Docker command: ", command)
+    return command
 
 
 def create_sandbox_container(client: docker.client, image_name: str, secure_mode: bool = False) -> docker.models.containers.Container:
@@ -63,13 +64,13 @@ def create_sandbox_container(client: docker.client, image_name: str, secure_mode
     Returns:
         docker.models.containers.Container: The created Docker container.
     """
-    cmd = create_docker_command()
+    command = create_docker_command()
     sandbox_container = client.containers.create(
         image_name,
         stdin_open=True,
         tty=True,
         detach=True,
-        command=cmd,
+        command=command,
         network_disabled=secure_mode,
     )
     print("PyDetective debug: Sandbox container created: ", sandbox_container.id)

@@ -2,6 +2,7 @@ import subprocess
 import sys
 import time
 import logging
+import os
 
 from . import containers, scanning, analysis, profile
 
@@ -59,7 +60,7 @@ def analyze_package(profile: profile.Profile, secure_mode: bool = False) -> None
     sandbox_container.remove(force=True)
 
 
-def install_package_on_host(profile: profile.Profile, package_path: str) -> None:
+def install_package_on_host(profile: profile.Profile) -> None:
     """
     Install a package on the host system..
 
@@ -73,10 +74,35 @@ def install_package_on_host(profile: profile.Profile, package_path: str) -> None
     print(f"[{time.strftime('%H:%M:%S')}] [INFO] Installing package '{profile.package_name}' on host environment ...")
     logging.info(f"Installing package '{profile.package_name}' on host environment")
     try:
-        command = f""
-        subprocess.Popen()
+        install_archives(profile.archives_path)
     except subprocess.CalledProcessError as e:
         print(f"[{time.strftime('%H:%M:%S')}] [ERROR] Failed to install package '{profile.package_name}': {e}")
         logging.error(f"Failed to install package '{profile.package_name}': {e}")
         print("\nExiting program ...\n")
         sys.exit(1)
+
+
+def install_archives(archives_path: str) -> None:
+    """
+    Install all package archives in the specified folder using pip.
+    This function assumes that the archives are in a format compatible with pip.
+
+    Args:
+        archives_path (str): Path to folder containing all package archives.
+
+    Returns:
+        None
+    """
+    archives = [f for f in os.listdir(archives_path)]
+    if not archives:
+        raise Exception("There are no archives to install.")
+
+    for archive in archives:
+        archive_path = os.path.join(archives_path, archive)
+        try:
+            command = f"pip install {archive_path}"
+            installer = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE)
+            installer.wait()
+        except subprocess.CalledProcessError as e:
+            print(f"[{time.strftime('%H:%M:%S')}] [ERROR] Failed to install archive '{archive_path}': {e}")
+            logging.error(f"Failed to install package '{archive_path}': {e}")
