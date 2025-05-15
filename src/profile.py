@@ -15,6 +15,16 @@ class Profile:
         self.static_analyzer = None
         self.package_name = None
 
+        self.enrichment_services = config.get('enrichment_services')
+        if self.enrichment_services:
+            self.otx_api_key = self.enrichment_services.get('otx_api_key')
+            
+        else:
+            print(f"[{time.strftime('%H:%M:%S')}] [ERROR] Container configurations are not present in the configuration file ...")
+            logging.error(f"Container configurations are not present in the configuration file")
+            print("\nExiting program ...\n")
+            sys.exit(1)
+
         self.file_paths = config.get('file_paths')
         if self.file_paths:
             # Load all file paths from the configuration

@@ -1,3 +1,6 @@
+enrichment_services:
+  otx_api_key: Null
+
 containers:
   image_name: pydetective_sandbox_container
   image_tag: pydetective_sandbox_container:latest
@@ -30,7 +33,9 @@ file_paths:
   src_folder_path: src
 
 ignored_ips:
-  - 1.2.3.
+  - 151.101.0.223
+  - 151.101.192.223
+  - 151.101.128.223
 
 ignored_domains:
   - pypi.org
@@ -42,14 +47,6 @@ ignored_syscalls:
   # deep scan calls
   # - not (fd.name contains '/etc/shadow')
   # - not (fd.name contains '/usr/local/lib/python3')
-
-enrichment_services:
-  abuseipdb: False
-  threatfox: False
-  virustotal: False
-  shodan: False
-  alienvault: False
-  urlhaus: False
 
 thresholds:
   MAX_FREQUENCY: 10 # percentage

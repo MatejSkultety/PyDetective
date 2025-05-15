@@ -12,14 +12,88 @@ class Verdict(Enum):
     MALICIOUS = "MALICIOUS"
 
 
-def evaluate_network_results(*args, **kwargs):
-    # Placeholder implementation
-    return {
+def evaluate_network_results(source_path: str) -> dict:
+    result = {
         "warnings": 0,
         "errors": 0,
         "verdict": Verdict.SAFE.value,
         "issues": []
     }
+
+    with open(source_path, "r") as file:
+        data = json.load(file)
+
+        # Evaluate IP addresses
+        for ip_info in data.get("ip_addresses", []):
+            try:
+                if "otx_malicious" in ip_info:
+                    if ip_info.get("otx_malicious"):
+                        issue = {
+                            "priority": "ERROR",
+                            "rule": f"Dangerous IP accessed: {ip_info.get('ip', '')} - {ip_info.get('asn_description', '')}",
+                            "output": ip_info
+                        }
+                        result["issues"].append(issue)
+                        result["errors"] += 1
+                    else:
+                        issue = {
+                            "priority": "INFO",
+                            "rule": f"IP accessed: {ip_info.get('ip', '')} - {ip_info.get('asn_description', '')}",
+                            "output": ip_info
+                        }
+                        result["issues"].append(issue)
+                else:
+                    issue = {
+                        "priority": "WARNING",
+                        "rule": f"IP without OTX details accessed {ip_info.get('ip', '')}",
+                        "output": ip_info
+                    }
+                    result["issues"].append(issue)
+                    result["warnings"] += 1
+            except Exception:
+                issue = {
+                    "priority": "WARNING",
+                    "rule": f"IP {ip_info.get('ip', 'unknown')} - Could not evaluate",
+                    "output": ip_info
+                }
+                result["issues"].append(issue)
+                result["warnings"] += 1
+
+        # Evaluate domain names
+        for domain_info in data.get("domain_names", []):
+            try:
+                if "otx_malicious" in domain_info and domain_info.get("otx_malicious"):
+                    issue = {
+                        "priority": "ERROR",
+                        "rule": f"Dangerous domain accessed: {domain_info.get('domain', '')}",
+                        "output": domain_info
+                    }
+                    result["issues"].append(issue)
+                    result["errors"] += 1  
+                else:   
+                    issue = {
+                        "priority": "WARNING",
+                        "rule": f"Unexpected domain accessed: {domain_info.get('domain', '')}",
+                        "output": domain_info
+                    }
+                    result["issues"].append(issue)
+                    result["warnings"] += 1
+            except Exception:
+                issue = {
+                    "priority": "WARNING",
+                    "rule": f"Domain {domain_info.get('domain', 'unknown')} - Could not evaluate",
+                    "output": domain_info
+                }
+                result["issues"].append(issue)
+                result["warnings"] += 1
+
+    if result["errors"] > 0:
+        result["verdict"] = Verdict.MALICIOUS.value
+    elif result["warnings"] > 0:
+        result["verdict"] = Verdict.DANGEROUS.value
+    else:
+        result["verdict"] = Verdict.SAFE.value
+    return result
 
 
 def evaluate_syscalls_results(source_path: str) -> dict:
@@ -53,7 +127,6 @@ def evaluate_syscalls_results(source_path: str) -> dict:
         result["verdict"] = Verdict.DANGEROUS.value
     else:
         result["verdict"] = Verdict.SAFE.value
-
     return result
 
 
@@ -73,24 +146,23 @@ def evaluate_static_results(source_path: str) -> dict:
                 matches = entry.get("matches", [])
 
                 for match in matches:
-                    # Extract specific fields for the event
-                    formatted_event = {
-                        "priority": "WARNING" if match.get("rule") else "INFO",
-                        "rule": str(match.get("rule", "") + " " + file_path),
-                        "output": {
-                            "meta": match.get("meta", {}), 
-                            "strings": match.get("strings", [])
-                        }
-                    }
-                    result["issues"].append(formatted_event)
-
-                    # Update counts based on the presence of matches
                     if match.get("rule"):
-                        result["warnings"] += 1
+                        formatted_event = {
+                            "priority": "ERROR",
+                            "rule": str(match.get("rule", "") + " " + file_path),
+                            "output": {
+                                "meta": match.get("meta", {}), 
+                                "strings": match.get("strings", [])
+                            }
+                        }
+                        result["issues"].append(formatted_event)
+                        result["errors"] += 1
 
         except json.JSONDecodeError:
             print("Invalid JSON file encountered, skipping.")
-    if result["warnings"] > 0:
+    if result["errors"] > 0:
+        result["verdict"] = Verdict.MALICIOUS.value
+    elif result["warnings"] > 0:
         result["verdict"] = Verdict.DANGEROUS.value
     else:
         result["verdict"] = Verdict.SAFE.value
@@ -147,34 +219,7 @@ def evaluate_package(profile: profile.Profile, static_result: dict = None) -> di
 
 
 def get_package_metadata_from_pyproject(package_path: str) -> dict:
-    pyproject_path = f"{package_path}/pyproject.toml"
-    try:
-        with open(pyproject_path, "r") as file:
-            pyproject_data = toml.load(file)
-            # Extract metadata from the pyproject.toml file
-            project = pyproject_data.get("project", {})
-            return {
-                "name": project.get("name", ""),
-                "version": project.get("version", ""),
-                "author": ", ".join([author.get("name", "") for author in project.get("authors", [])]),
-                "description": project.get("description", "No description provided")
-            }
-    except FileNotFoundError:
-        print(f"pyproject.toml not found in {package_path}")
-        return {
-            "name": "Unknown",
-            "version": "Unknown",
-            "author": "Unknown",
-            "description": "No description provided"
-        }
-    except toml.TomlDecodeError:
-        print(f"Invalid TOML format in {pyproject_path}")
-        return {
-            "name": "Unknown",
-            "version": "Unknown",
-            "author": "Unknown",
-            "description": "No description provided"
-        }
+    pass
 
 
 def export_results(evaluation_result: dict, export_path: str) -> None:

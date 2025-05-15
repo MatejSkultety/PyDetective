@@ -3,7 +3,11 @@ import json
 import subprocess
 import yara
 import os
+import requests
 from datetime import datetime
+import ipwhois
+import socket
+import whois
 
 from . import profile
 
@@ -53,9 +57,86 @@ def parse_network_artefacts(profile: profile.Profile) -> tuple[set, set]:
     return ip_addresses, domain_names
 
 
+def check_ip_otx(ip: str, profile: profile.Profile) -> dict:
+    otx_api_key = profile.otx_api_key
+    if not otx_api_key:
+        return {}
+    url = f"https://otx.alienvault.com/api/v1/indicators/IPv4/{ip}/general"
+    headers = {"X-OTX-API-KEY": otx_api_key}
+    try:
+        r = requests.get(url, headers=headers, timeout=10)
+        if r.ok:
+            data = r.json()
+            pulses = data.get("pulse_info", {}).get("count", 0)
+            malicious = pulses > 0
+            return {
+                "otx_malicious": malicious,
+                "otx_pulse_count": pulses,
+                "otx_pulse_names": [p["name"] for p in data.get("pulse_info", {}).get("pulses", [])]
+            }
+    except Exception:
+        pass
+    return {}
+
+
+def check_domain_otx(domain: str, profile: profile.Profile) -> dict:
+    otx_api_key = profile.otx_api_key
+    if not otx_api_key:
+        return {}
+    url = f"https://otx.alienvault.com/api/v1/indicators/domain/{domain}/general"
+    headers = {"X-OTX-API-KEY": otx_api_key}
+    try:
+        r = requests.get(url, headers=headers, timeout=10)
+        if r.ok:
+            data = r.json()
+            pulses = data.get("pulse_info", {}).get("count", 0)
+            malicious = pulses > 0
+            return {
+                "otx_malicious": malicious,
+                "otx_pulse_count": pulses,
+                "otx_pulse_names": [p["name"] for p in data.get("pulse_info", {}).get("pulses", [])]
+            }
+    except Exception:
+        pass
+    return {}
+
+
+def enrich_ip(ip: str, profile) -> dict:
+    result = {"ip": ip}
+    try:
+        obj = ipwhois.IPWhois(ip)
+        res = obj.lookup_rdap()
+        result.update({
+            "asn": res.get("asn"),
+            "asn_description": res.get("asn_description"),
+            "country": res.get("network", {}).get("country"),
+            "network_name": res.get("network", {}).get("name"),
+        })
+    except Exception:
+        pass
+    result.update(check_ip_otx(ip, profile))
+    return result
+
+
+def enrich_domain(domain: str, profile) -> dict:
+    result = {"domain": domain}
+    try:
+        w = whois.whois(domain)
+        result.update({
+            "registrar": w.registrar,
+            "creation_date": str(w.creation_date),
+            "expiration_date": str(w.expiration_date),
+            "name_servers": w.name_servers,
+        })
+    except Exception:
+        pass
+    result.update(check_domain_otx(domain, profile))
+    return result
+
+
 def analyse_network_artefacts(profile: profile.Profile) -> None:
     """
-    Analyze network artefacts from a pcap file and export the results to a JSON file.
+    Analyze network artefacts from a pcap file, enrich them and export the results to a JSON file.
 
     Args:
         profile (profile.Profile): The profile instance containing configuration.
@@ -64,9 +145,11 @@ def analyse_network_artefacts(profile: profile.Profile) -> None:
         None
     """
     ip_addresses, domain_names = parse_network_artefacts(profile)
+    enriched_ips = [enrich_ip(ip, profile) for ip in ip_addresses]
+    enriched_domains = [enrich_domain(domain, profile) for domain in domain_names]
     result = {
-        'ip_addresses': list(ip_addresses),
-        'domain_names': list(domain_names)
+        'ip_addresses': enriched_ips,
+        'domain_names': enriched_domains
     }
     with open(profile.network_result_path, 'w') as f:
         json.dump(result, f, indent=4)
