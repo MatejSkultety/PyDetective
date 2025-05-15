@@ -1,5 +1,5 @@
 enrichment_services:
-  otx_api_key: Null
+  otx_api_key: 
 
 containers:
   image_name: pydetective_sandbox_container
@@ -33,14 +33,14 @@ file_paths:
   src_folder_path: src
 
 ignored_ips:
-  - 151.101.0.223
-  - 151.101.192.223
-  - 151.101.128.223
+  # - 151.101.0.223
+  # - 151.101.192.223
+  # - 151.101.128.223
 
 ignored_domains:
-  - pypi.org
-  - files.pythonhosted.org
-  - dualstack.python.map.fastly.net
+  # - pypi.org
+  # - files.pythonhosted.org
+  # - dualstack.python.map.fastly.net
 
 ignored_syscalls:
 

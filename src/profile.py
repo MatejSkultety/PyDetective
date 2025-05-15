@@ -90,6 +90,8 @@ class Profile:
                 logging.error(f"'ignored_ips' must be a list of strings in the configuration file")
                 print("\nExiting program ...\n")
                 sys.exit(1)
+        else:
+            self.ignored_ips = []
 
         self.ignored_domains = config.get('ignored_domains')
         if self.ignored_domains is not None:
@@ -98,6 +100,8 @@ class Profile:
                 logging.error(f"'ignored_domains' must be a list of strings in the configuration file")
                 print("\nExiting program ...\n")
                 sys.exit(1)
+        else:
+            self.ignored_domains = []
 
         self.ignored_syscalls = config.get('ignored_syscalls')
         if self.ignored_syscalls is not None:
