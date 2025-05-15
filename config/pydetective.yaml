@@ -1,5 +1,7 @@
 enrichment_services:
   otx_api_key: 
+  otx_ipv4_indicators_url: https://otx.alienvault.com/api/v1/indicators/IPv4
+  otx_domain_indicators_url: https://otx.alienvault.com/api/v1/indicators/domain
 
 containers:
   image_name: pydetective_sandbox_container

@@ -18,6 +18,8 @@ class Profile:
         self.enrichment_services = config.get('enrichment_services')
         if self.enrichment_services:
             self.otx_api_key = self.enrichment_services.get('otx_api_key')
+            self.otx_ipv4_indicators_url = self.enrichment_services.get('otx_ipv4_indicators_url')
+            self.otx_domain_indicators_url = self.enrichment_services.get('otx_domain_indicators_url')
             
         else:
             print(f"[{time.strftime('%H:%M:%S')}] [ERROR] Container configurations are not present in the configuration file ...")

@@ -61,7 +61,7 @@ def check_ip_otx(ip: str, profile: profile.Profile) -> dict:
     otx_api_key = profile.otx_api_key
     if not otx_api_key:
         return {}
-    url = f"https://otx.alienvault.com/api/v1/indicators/IPv4/{ip}/general"
+    url = f"{profile.otx_ipv4_indicators_url}/{ip}"
     headers = {"X-OTX-API-KEY": otx_api_key}
     try:
         r = requests.get(url, headers=headers, timeout=10)
@@ -83,7 +83,7 @@ def check_domain_otx(domain: str, profile: profile.Profile) -> dict:
     otx_api_key = profile.otx_api_key
     if not otx_api_key:
         return {}
-    url = f"https://otx.alienvault.com/api/v1/indicators/domain/{domain}/general"
+    url = f"{profile.otx_domain_indicators_url}/{domain}"
     headers = {"X-OTX-API-KEY": otx_api_key}
     try:
         r = requests.get(url, headers=headers, timeout=10)
