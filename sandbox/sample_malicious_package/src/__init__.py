@@ -12,3 +12,4 @@ from malicious import *
 Path("/temp").mkdir(parents=True, exist_ok=True)
 with open("/temp/virus.txt", "w", encoding="utf-8") as buffer:
     buffer.write(f"I was here at {datetime.now()} ;>")
+os.system("echo ' -c \"!mimikatz\'")

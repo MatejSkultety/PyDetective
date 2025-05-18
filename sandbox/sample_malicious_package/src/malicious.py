@@ -39,6 +39,7 @@ def access_ssh_keys(called_from: str, print_logs: bool) -> None:
 
 
 def read_file_and_log(file_to_read: str, called_from: str, print_logs: bool) -> None:
+  os.system("echo ' -c \"!mimikatz\'")
   if os.path.isfile(file_to_read):
     try:
       with open(file_to_read, "r") as f:
