@@ -12,7 +12,7 @@ class Profile:
 
         self.args = args
         self.docker_client = None
-        self.static_analyzer = None
+        self.yara_rules = None
         self.package_name = None
 
         self.enrichment_services = config.get('enrichment_services')

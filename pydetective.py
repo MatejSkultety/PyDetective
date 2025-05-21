@@ -269,7 +269,7 @@ def init_pydetective(args: argparse.Namespace) -> Profile:
     logging.info("Compiling detection rules")
     if not args.quiet:
         print(f"[{time.strftime('%H:%M:%S')}] [INFO] Compiling detection rules...")
-    profile.static_analyzer = analysis.StaticAnalyzer(profile.static_rules_folder_path)
+    profile.yara_rules = analysis.compile_yara_rules(profile.static_rules_folder_path)
     logging.info("Starting analysis")
     if not args.quiet:
         print(f"[{time.strftime('%H:%M:%S')}] [INFO] Everything is ready, starting analysis...")

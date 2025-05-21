@@ -171,124 +171,93 @@ def analyse_syscalls_artefacts(config_path: str, export_path: str) -> None:
     process = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     process.wait()
 
-# TODO consider max time limit for the process
-class StaticAnalyzer:
+
+def compile_yara_rules(rules_path: str) -> dict:
     """
-    A class to perform static analysis on files using YARA rules.
-    YARA rules can be compiled from a directory or a single file and scan files for matches.
+    Compile YARA rules from a directory or a single file.
+    If the path is a directory, it will compile all .yar and .yara files in that directory.
+    
+    Args:
+        rules_path (str): The path to the directory or file containing YARA rules.
+
+    Returns:
+        dict: A dictionary of compiled YARA rules.
     """
-    def __init__(self: object, rules_path: str) -> None:
-        """
-        Initialize the StaticAnalyzer with the path to YARA rules.
+    if os.path.isfile(rules_path):
+        return yara.compile(filepath=rules_path)
+    all_rules = {}
+    for root, _, files in os.walk(rules_path):
+        for file in files:
+            if file.endswith('.yar') or file.endswith('.yara'):
+                rule_path = os.path.join(root, file)
+                try:
+                    rule_name = os.path.splitext(file)[0]
+                    all_rules[rule_name] = yara.compile(filepath=rule_path)
+                except yara.SyntaxError as e:
+                    print(f"Syntax error in {rule_path}: {e}")
+    return all_rules
 
-        Args:
-            rules_path (str): The path to the directory or file containing YARA rules.
 
-        Returns:
-            None
-        """
-        self.rules = self.compile_rules(rules_path)
-        self.results = []
-    
+def scan_file(file_path: str, rules: dict, results: list) -> dict:
+    """
+    Perform static analysis on a single file using compiled YARA rules.
 
-    def compile_rules(self: object, rules_path: str) -> dict:
-        """
-        Compile YARA rules from a directory or a single file.
-        If the path is a directory, it will compile all .yar and .yara files in that directory.
-        
-        Args:
-            rules_path (str): The path to the directory or file containing YARA rules.
+    Args:
+        file_path (str): The path to the file to scan.
+        rules (dict): Dictionary of compiled YARA rules.
+        results (list): List to append the scan result.
 
-        Returns:
-            dict: A dictionary of compiled YARA rules.
-        """
-        if os.path.isfile(rules_path):
-            return yara.compile(filepath=rules_path)
-        all_rules = {}
-        for root, _, files in os.walk(rules_path):
-            for file in files:
-                if file.endswith('.yar') or file.endswith('.yara'):
-                    rule_path = os.path.join(root, file)
-                    try:
-                        rule_name = os.path.splitext(file)[0]
-                        all_rules[rule_name] = yara.compile(filepath=rule_path)
-                    except yara.SyntaxError as e:
-                        print(f"Syntax error in {rule_path}: {e}")
-        return all_rules
-    
+    Returns:
+        dict: A dictionary containing the results of the scan, including matches found.
+    """
+    result = {
+        'file': file_path,
+        'timestamp': datetime.now().isoformat(),
+        'matches': []
+    }
+    try:
+        for rule_name, rule in rules.items():
+            matches = rule.match(filepath=file_path)
+            if matches:
+                for match in matches:
+                    match_info = {
+                        'rule': match.rule,
+                        'namespace': match.namespace,
+                        'tags': list(match.tags),
+                        'meta': match.meta,
+                        'strings': []
+                    }
+                    for string_match in match.strings:
+                        for instance in string_match.instances:
+                            string_info = {
+                                'identifier': string_match.identifier,
+                                'offset': instance.offset,
+                                'matched_data': instance.matched_data.hex()[:50] + '...' if len(instance.matched_data) > 25 else instance.matched_data.hex()
+                            }
+                            match_info['strings'].append(string_info)
+                    result['matches'].append(match_info)
+    except Exception as e:
+        result['error'] = str(e)
+    results.append(result)
+    return result
 
-    def scan_file(self: object, file_path: str) -> dict:
-        """
-        Perform static analysis on a single file using compiled YARA rules.
 
-        Args:
-            file_path (str): The path to the file to scan.
+def scan_directory(directory_path: str, rules: dict, export_path: str) -> None:
+    """
+    Recursively scan all files in a directory using compiled YARA rules.
 
-        Returns:
-            dict: A dictionary containing the results of the scan, including matches found.
-        """
-        result = {
-            'file': file_path,
-            'timestamp': datetime.now().isoformat(),
-            'matches': []
-        }
-        try:
-            for rule_name, rule in self.rules.items():
-                matches = rule.match(filepath=file_path)
-                if matches:
-                    for match in matches:
-                        match_info = {
-                            'rule': match.rule,
-                            'namespace': match.namespace,
-                            'tags': list(match.tags),
-                            'meta': match.meta,
-                            'strings': []
-                        }
-                        for string_match in match.strings:
-                            for instance in string_match.instances:
-                                string_info = {
-                                    'identifier': string_match.identifier,
-                                    'offset': instance.offset,
-                                    'matched_data': instance.matched_data.hex()[:50] + '...' if len(instance.matched_data) > 25 else instance.matched_data.hex()
-                                }
-                                match_info['strings'].append(string_info)
-                        result['matches'].append(match_info)
-        except Exception as e:
-            result['error'] = str(e)
-        self.results.append(result)
-        return result
-    
+    Args:
+        directory_path (str): The path to the directory to scan.
+        rules (dict): Dictionary of compiled YARA rules.
+        export_path (str): The path to the file where the results will be saved.
 
-    def scan_directory(self: object, directory_path: str, export_path: str = None) -> None:
-        """
-        Recursively scan all files in a directory using compiled YARA rules.
-
-        Args:
-            directory_path (str): The path to the directory to scan.
-            export_path (str, optional): The path to the file where the results will be saved. Defaults to None.
-
-        Returns:
-            None
-        
-        """
-        self.results = []
-        for root, _, files in os.walk(directory_path):
-            for file in files:
-                file_path = os.path.join(root, file)
-                self.scan_file(file_path)
-        if export_path:
-            self.export_results(export_path)
-    
-    
-    def export_results(self: object, export_path: str) -> None:
-        """
-        Export the results of static analysis to a JSON file.
-
-        Args:
-            export_path (str): The path to the file where the results will be saved.
-
-        Returns:
-            None
-        """
-        with open(export_path, 'w') as f:
-            json.dump(self.results, f, indent=4)
+    Returns:
+        None
+    """
+    results = []
+    for root, _, files in os.walk(directory_path):
+        for file in files:
+            file_path = os.path.join(root, file)
+            scan_file(file_path, rules, results)
+    with open(export_path, 'w') as f:
+        json.dump(results, f, indent=4)

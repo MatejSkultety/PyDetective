@@ -23,7 +23,7 @@ def analyze_package(profile: profile.Profile) -> str:
     # static__analyzer.scan_directory(profile.extracted_path, profile.static_result_path)
 
     # TODO evaluate and if dangerous, stop the process
-    profile.static_analyzer.scan_directory(profile.extracted_path, profile.static_result_path)
+    analysis.scan_directory(profile.extracted_path, profile.yara_rules ,profile.static_result_path)
     static_result = evaluation.evaluate_static_results(profile.static_result_path)
 
     if static_result["verdict"] == Verdict.MALICIOUS.value and profile.args.secure:
