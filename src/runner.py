@@ -19,38 +19,80 @@ def analyze_package(profile: profile.Profile) -> str:
     Returns:
         verdict (str): The verdict of the analysis.
     """
-    # static__analyzer = analysis.StaticAnalyzer(profile.static_rules_folder_path)
-    # static__analyzer.scan_directory(profile.extracted_path, profile.static_result_path)
-
-    # TODO evaluate and if dangerous, stop the process
+    logging.info("Starting static analysis of package")
+    if not profile.args.quiet:
+        print(f"[{time.strftime('%H:%M:%S')}] [INFO] Starting static analysis of package...")
     analysis.scan_directory(profile.extracted_path, profile.yara_rules ,profile.static_result_path)
+    
     static_result = evaluation.evaluate_static_results(profile.static_result_path)
+    logging.info("Static results evaluated")
+    if not profile.args.quiet:
+        print(f"[{time.strftime('%H:%M:%S')}] [INFO] Static results evaluated.")
 
     if static_result["verdict"] == Verdict.MALICIOUS.value and profile.args.secure:
-        print(f"[{time.strftime('%H:%M:%S')}] [ERROR] Package is detected as MALICIOUS by static analysis. Stopping the process ...")
+        print(f"[{time.strftime('%H:%M:%S')}] [WARNING] Package is detected as MALICIOUS by static analysis. Stopping the process ...")
         logging.error(f"Package is detected as MALICIOUS by static analysis. Stopping the process ...")
         return static_result["verdict"]
 
+    logging.info("Building sandbox image")
+    if not profile.args.quiet:
+        print(f"[{time.strftime('%H:%M:%S')}] [INFO] Building sandbox image...")
     containers.build_sandbox_image(profile.docker_client, profile.sandbox_folder_path, profile.image_tag)
+
+    logging.info("Creating sandbox container")
+    if profile.args.verbose:
+        print(f"[{time.strftime('%H:%M:%S')}] [INFO] Creating sandbox container...")
     sandbox_container = containers.create_sandbox_container(profile)    
-    # Start network and syscall scans
+
+    logging.info("Starting syscall scan")
+    if not profile.args.quiet:
+        print(f"[{time.strftime('%H:%M:%S')}] [INFO] Starting syscall scan...")
     sysdig_process = scanning.scan_syscalls(sandbox_container, profile.syscalls_output_path, profile.ignored_syscalls)
+
+    logging.info("Copying package to container")
+    if profile.args.verbose:
+        print(f"[{time.strftime('%H:%M:%S')}] [INFO] Copying package to container...")
     containers.copy_package_to_container(sandbox_container, profile.archives_path, profile.container_dir_path)
+
+    logging.info("Starting sandbox container")
+    if not profile.args.quiet:
+        print(f"[{time.strftime('%H:%M:%S')}] [INFO] Starting sandbox container...")
     sandbox_container.start()
+
+    logging.info("Starting network scan")
+    if not profile.args.quiet:
+        print(f"[{time.strftime('%H:%M:%S')}] [INFO] Starting network scan...")
     tcpdump_container = scanning.scan_network(profile.docker_client, sandbox_container, profile.network_output_path)
 
     sandbox_container.wait()
-    containers.get_logs_from_container(sandbox_container, profile.logging_path, True) # TODO true z profile.verbose
+    containers.get_logs_from_container(sandbox_container, profile.logging_path, profile.args.verbose)
     scanning.stop_network_scan(tcpdump_container, profile.network_output_path)
     sysdig_process.kill()
+
     if profile.args.deep:
-        pass
+        logging.info("Performing deep analysis of sandbox container")
+        if not profile.args.quiet:
+            print(f"[{time.strftime('%H:%M:%S')}] [INFO] Performing deep analysis of sandbox container...")
+
+    logging.info("Instalation complete. Removing sandbox container")
+    if not profile.args.quiet:
+        print(f"[{time.strftime('%H:%M:%S')}] [INFO] Instalation complete. Removing sandbox container...")
     sandbox_container.stop()
     sandbox_container.remove(force=True)
 
+    logging.info("Analyzing syscall artefacts")
+    if profile.args.verbose:
+        print(f"[{time.strftime('%H:%M:%S')}] [INFO] Analyzing syscall artefacts...")
     analysis.analyse_syscalls_artefacts(profile.falco_config_path, profile.syscalls_result_path)
+
+    logging.info("Analyzing network artefacts")
+    if profile.args.verbose:
+        print(f"[{time.strftime('%H:%M:%S')}] [INFO] Analyzing network artefacts...")
     analysis.analyse_network_artefacts(profile)
     
+    logging.info("Evaluating final package verdict")
+    if profile.args.verbose:
+        print(f"[{time.strftime('%H:%M:%S')}] [INFO] Evaluating final package verdict...")
     return evaluation.evaluate_package(profile, static_result)
 
 

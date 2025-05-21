@@ -1,3 +1,4 @@
+import time
 import docker
 import tarfile
 import zipfile
@@ -5,6 +6,7 @@ from io import BytesIO
 import subprocess
 import os
 import shutil
+import logging
 
 from . import profile
 
@@ -23,12 +25,11 @@ def build_sandbox_image(client: docker.client, build_path: str, image_tag: str) 
     Returns:
         docker.models.images.Image: The created Docker image.
     """
-    print("PyDetective debug: Building sandbox image")
     sandbox_image = client.images.build(
         path=build_path,
         tag=image_tag,
     )
-    print("PyDetective debug: Sandbox image built: ", sandbox_image[0].tags, sandbox_image[0].short_id)
+    logging.debug("Sandbox image built: ", sandbox_image[0].tags, sandbox_image[0].short_id)
     return sandbox_image
 
 
@@ -42,13 +43,9 @@ def create_docker_command(deep_analysis: bool) -> list[str]:
     Returns:
         list[str]: The command to run the Docker container.
     """
-    # TODO add options and checks
-    # command = ["sh", "-c", f"pip install --no-cache-dir --break-system-packages ./{file_name} && ls /app"]
-    # command = ['sh', '-c', 'ls /app/archives']
     command = ["python3", "/app/executor.py"]
     if deep_analysis:
         command.append("-d")
-    print("PyDetective debug: Docker command: ", command)
     return command
 
 
@@ -73,7 +70,7 @@ def create_sandbox_container(profile: profile.Profile) -> docker.models.containe
         command=command,
         network_disabled=profile.args.secure,
     )
-    print("PyDetective debug: Sandbox container created: ", sandbox_container.id)
+    logging.debug(f"Sandbox container created: {sandbox_container.id}, {sandbox_container.name}")
     return sandbox_container
 
 
@@ -95,11 +92,11 @@ def extract_file_from_container(container: docker.models.containers.Container, s
         with tarfile.open(fileobj=tar_stream, mode="r|") as tar:
             # containrt.get_archive returns a tar stream, we need to extract it to the specified path
             tar.extractall(path=destination_path)
-        print(f"File extracted from {source_path} in container to {destination_path}")
+        logging.error(f"File extracted from {source_path} in container to {destination_path}")
     except docker.errors.APIError as e:
-        print(f"Error extracting file: {e}")
+        logging.error(f"Error extracting file: {e}")
     except Exception as e:
-        print(f"Unexpected error: {e}")
+        logging.error(f"Unexpected error: {e}")
 
 
 def copy_package_to_container(container: docker.models.containers.Container, source_path: str, destination_path: str) -> None:
@@ -120,11 +117,11 @@ def copy_package_to_container(container: docker.models.containers.Container, sou
             tar.add(source_path, arcname=os.path.basename(source_path))
         tar_stream.seek(0)
         container.put_archive(destination_path, tar_stream)
-        print(f"Package {source_path} copied to container at {destination_path}")
+        logging.debug(f"Package {source_path} copied to container at {destination_path}")
     except docker.errors.APIError as e:
-        print(f"Error copying package to container: {e}")
+        logging.error(f"Error copying package to container: {e}")
     except Exception as e:
-        print(f"Unexpected error: {e}")
+        logging.error(f"Unexpected error: {e}")
 
 
 def get_logs_from_container(sandbox_container: docker.models.containers.Container, destination_path: str, verbose: bool) -> None:
@@ -162,6 +159,9 @@ def download_package(profile: profile.Profile, local_package: bool) -> str:
     delete_package(profile.archives_path)
     delete_package(profile.extracted_path)
     if local_package:
+        logging.info("Processing local package")
+        if profile.args.verbose:
+            print(f"[{time.strftime('%H:%M:%S')}] [INFO] Processing local package...")
         try:
             if profile.package_name.endswith(".tar.gz") or profile.package_name.endswith(".whl"):
                 shutil.copy(profile.package_name, profile.archives_path)
@@ -173,6 +173,9 @@ def download_package(profile: profile.Profile, local_package: bool) -> str:
             raise Exception(f"Failed to copy local package: {e}")
         return profile.package_name
     else:
+        logging.info("Downloading package from PyPI")
+        if profile.args.verbose:
+            print(f"[{time.strftime('%H:%M:%S')}] [INFO] Downloading package from PyPI...")
         try:
             downloader = subprocess.Popen(f"pip download -d {profile.archives_path} {profile.package_name}", shell=True, stdout=subprocess.PIPE)
             downloader.wait()
@@ -193,6 +196,7 @@ def extract_package(archives_path: str, extraction_path: str) -> None:
     Returns:
         None
     """
+    logging.debug(f"Extracting package archives from {archives_path} to {extraction_path}")
     archives = [f for f in os.listdir(archives_path)]
     if not archives:
         raise Exception("Package wasn't downloaded successfully.")
@@ -226,8 +230,9 @@ def delete_package(delete_path: str) -> None:
     Returns:
         None
     """
+    logging.debug(f"Deleting package at {delete_path}")
     if os.path.exists(delete_path):
         try:
             shutil.rmtree(delete_path)
         except Exception as e:
-            print(f"Error deleting package: {e}")
+            logging.error(f"Error deleting package: {e}")

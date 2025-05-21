@@ -6,7 +6,7 @@ import os
 import requests
 from datetime import datetime
 import ipwhois
-import socket
+import logging
 import whois
 
 from . import profile
@@ -25,6 +25,7 @@ def parse_network_artefacts(profile: profile.Profile) -> tuple[set, set]:
             - IP addresses (set): Unique IP addresses found in the pcap file.
             - Domain names (set): Unique domain names found in the pcap file.
     """
+    logging.debug(f"Parsing network artefacts from {profile.network_output_path}")
     ip_addresses = set()
     domain_names = set()
 
@@ -102,6 +103,7 @@ def check_domain_otx(domain: str, profile: profile.Profile) -> dict:
 
 
 def enrich_ip(ip: str, profile) -> dict:
+    logging.debug(f"Enriching IP address {ip}")
     result = {"ip": ip}
     try:
         obj = ipwhois.IPWhois(ip)
@@ -119,6 +121,7 @@ def enrich_ip(ip: str, profile) -> dict:
 
 
 def enrich_domain(domain: str, profile) -> dict:
+    logging.debug(f"Enriching domain {domain}")
     result = {"domain": domain}
     try:
         w = whois.whois(domain)
@@ -168,6 +171,7 @@ def analyse_syscalls_artefacts(config_path: str, export_path: str) -> None:
         None
     """
     command = [f"sudo falco -c {config_path} > {export_path}"]
+    logging.debug(f"Running Falco with command: {command}")
     process = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     process.wait()
 
@@ -194,7 +198,7 @@ def compile_yara_rules(rules_path: str) -> dict:
                     rule_name = os.path.splitext(file)[0]
                     all_rules[rule_name] = yara.compile(filepath=rule_path)
                 except yara.SyntaxError as e:
-                    print(f"Syntax error in {rule_path}: {e}")
+                    logging.error(f"Syntax error in {rule_path}: {e}")
     return all_rules
 
 

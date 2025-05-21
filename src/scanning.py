@@ -1,5 +1,6 @@
 import docker
 import subprocess
+import logging
 
 from . import containers
 
@@ -16,7 +17,7 @@ def create_network_command(export_path: str) -> list:
     """
     directory, file_name = export_path.rsplit("/", 1)
     command = ["tcpdump", "-N", "-t", "-w", file_name]
-    print(f"PyDetective debug: Tcpdump command: {command}")
+    logging.debug(f"Tcpdump command: {command}")
     return command
 
 
@@ -41,7 +42,6 @@ def scan_network(client: docker.client, sandbox: docker.models.containers.Contai
         tty=True,
         detach=True,
     )
-    print("PyDetective debug: Tcpdump container started: ID: ", tcpdump_container.id)
     return tcpdump_container
 
 
@@ -78,16 +78,12 @@ def create_syscalls_command(sandbox: docker.models.containers.Container, export_
         filter_string = f"container.name={sandbox.name}"
     else:
         filter_string = f"container.name={sandbox.name}" + " and " + " and ".join(filters)
-        print (f"PyDetective debug: Sysdig filters: {filter_string}")
 
     output_format = "%proc.name %proc.cmdline %proc.args %evt.num %evt.dir %evt.type %evt.info %evt.arg.flags %fd.name"
     command = f"sudo sysdig -j -w {export_path} -pc \"{filter_string}\" -p'{output_format}'"
-    print(f"PyDetective debug: Sysdig command: {command}")
+    logging.debug(f"Sysdig command: {command}")
     return command
-
 # sudo sysdig -pc "container.name=zealous_meninsky and not (fd.name contains '/lib/x86_64')" -p'%proc.name %proc.cmdline %proc.args %evt.type %evt.info %evt.arg.flags %fd.name'
-
-
 
 
 def scan_syscalls(sandbox: docker.models.containers.Container, export_path: str, filters: list[str] = None) -> subprocess.Popen:
