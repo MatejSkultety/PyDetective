@@ -2,6 +2,11 @@ import json
 from datetime import datetime
 import toml
 from enum import Enum
+from rich.console import Console
+from rich.table import Table
+from rich.panel import Panel
+from rich import box
+import weasyprint
 
 from . import profile
 
@@ -108,17 +113,19 @@ def evaluate_syscalls_results(source_path: str) -> dict:
         for line in file:
             try:
                 event = json.loads(line.strip())
+                falco_priority = event.get("priority", "").upper()
+                if falco_priority in ["NOTICE", "INFO", "DEBUG"]:
+                    result["warnings"] += 1
+                    priority = "WARNING"
+                else:
+                    result["errors"] += 1
+                    priority = "ERROR"
                 formatted_event = {
-                    "priority": event.get("priority", ""),
+                    "priority": priority,
                     "rule": event.get("rule", ""),
                     "output": event.get("output_fields", {})
                 }
                 result["issues"].append(formatted_event)
-                priority = formatted_event["priority"].upper()
-                if priority in ["NOTICE", "INFO", "DEBUG"]:
-                    result["warnings"] += 1
-                else:
-                    result["errors"] += 1
             except json.JSONDecodeError:
                 continue
     if result["errors"] > 0:
@@ -149,8 +156,9 @@ def evaluate_static_results(source_path: str) -> dict:
                     if match.get("rule"):
                         formatted_event = {
                             "priority": "ERROR",
-                            "rule": str(match.get("rule", "") + " " + file_path),
+                            "rule": str(match.get("rule", "")),
                             "output": {
+                                "file": entry.get("file", ""),
                                 "meta": match.get("meta", {}), 
                                 "strings": match.get("strings", [])
                             }
@@ -213,7 +221,7 @@ def evaluate_package(profile: profile.Profile, static_result: dict = None) -> di
         }
     }
 
-    export_results(package_evaluation, "out/evaluation_result.json")
+    export_results(profile, package_evaluation)
 
     return package_evaluation
 
@@ -222,6 +230,75 @@ def get_package_metadata_from_pyproject(package_path: str) -> dict:
     pass
 
 
-def export_results(evaluation_result: dict, export_path: str) -> None:
-    with open(export_path, "w") as file:
+def export_results(profile: profile.Profile, evaluation_result: dict) -> None:
+    with open(profile.evaluation_output_path, "w") as file:
         json.dump(evaluation_result, file, indent=4)
+    print_evaluation_result(profile, evaluation_result)
+
+
+def print_evaluation_result(profile: profile.Profile, evaluation_result: dict) -> None:
+    print('.' * profile.terminal_size.columns)
+    console = Console(record=True)
+    metadata = evaluation_result.get("metadata", {})
+    timestamp = evaluation_result.get("timestamp", "")
+    final_verdict = evaluation_result.get("final_verdict", "")
+    evaluations = evaluation_result.get("evaluations", {})
+
+    # Header panel and metadata table (skip if quiet)
+    header = f"[bold]PyDetective Analysis Result[/bold]\n[dim]Timestamp:[/dim] {timestamp}\n[dim]Final Verdict:[/dim] [bold]{final_verdict}[/bold]"
+    console.print(Panel(header, expand=False))
+
+    if metadata:
+        meta_table = Table(title="Package Metadata", box=box.SIMPLE)
+        meta_table.add_column("Key", style="bold")
+        meta_table.add_column("Value")
+        for k, v in metadata.items():
+            meta_table.add_row(str(k), str(v))
+        console.print(meta_table)
+
+    # Evaluations summary table (always shown)
+    summary_table = Table(title="Evaluation Summary", box=box.SIMPLE)
+    summary_table.add_column("Check", style="bold")
+    summary_table.add_column("Verdict")
+    summary_table.add_column("Warnings", justify="right")
+    summary_table.add_column("Errors", justify="right")
+    for check, result in evaluations.items():
+        summary_table.add_row(
+            check.capitalize(),
+            result.get("verdict", ""),
+            str(result.get("warnings", 0)),
+            str(result.get("errors", 0)),
+        )
+    console.print(summary_table)
+
+    if not profile.args.quiet:
+        for check, result in evaluations.items():
+            issues = result.get("issues", [])
+            if issues:
+                table = Table(title=f"{check.capitalize()} Triggered Rules", box=box.MINIMAL)
+                table.add_column("Priority", style="bold")
+                table.add_column("Rule")
+                if profile.args.verbose:
+                    table.add_column("Output", overflow="fold")
+                for issue in issues:
+                    if profile.args.verbose:
+                        table.add_row(
+                            str(issue.get("priority", "")),
+                            str(issue.get("rule", "")),
+                            str(issue.get("output", "")),
+                        )
+                    else:
+                        table.add_row(
+                            str(issue.get("priority", "")),
+                            str(issue.get("rule", "")),
+                        )
+                console.print(table)
+    html_content = console.export_html()
+    html_path = "out/evaluation_result.html"
+    with open(html_path, "w") as f:
+        f.write(html_content)
+    pdf_path = "out/evaluation_result.pdf"
+    weasyprint.HTML(string=html_content).write_pdf(pdf_path)
+
+def export_results_html(profile: profile.Profile, evaluation_result: dict) -> None:
+    pass
