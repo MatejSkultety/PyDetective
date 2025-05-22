@@ -45,7 +45,7 @@ def analyze_package(profile: profile.Profile) -> str:
     sandbox_container = containers.create_sandbox_container(profile)    
 
     logging.info("Starting syscall scan")
-    if not profile.args.quiet:
+    if profile.args.verbose:
         print(f"[{time.strftime('%H:%M:%S')}] [INFO] Starting syscall scan...")
     sysdig_process = scanning.scan_syscalls(sandbox_container, profile.syscalls_output_path, profile.ignored_syscalls)
 
@@ -60,7 +60,7 @@ def analyze_package(profile: profile.Profile) -> str:
     sandbox_container.start()
 
     logging.info("Starting network scan")
-    if not profile.args.quiet:
+    if profile.args.verbose:
         print(f"[{time.strftime('%H:%M:%S')}] [INFO] Starting network scan...")
     tcpdump_container = scanning.scan_network(profile.docker_client, sandbox_container, profile.network_output_path)
 
@@ -131,5 +131,5 @@ def install_package_on_host(archives_path: str, local_package: bool) -> None:
     except Exception as e:
         print(f"[{time.strftime('%H:%M:%S')}] [ERROR] Failed to install package: {e}")
         logging.error(f"Failed to install package: {e}")
-        print("\nExiting program ...\n")
+        print("Exiting program ...")
         sys.exit(1)

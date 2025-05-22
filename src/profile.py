@@ -24,7 +24,7 @@ class Profile:
         else:
             print(f"[{time.strftime('%H:%M:%S')}] [ERROR] Container configurations are not present in the configuration file ...")
             logging.error(f"Container configurations are not present in the configuration file")
-            print("\nExiting program ...\n")
+            print("Exiting program ...")
             sys.exit(1)
 
         self.file_paths = config.get('file_paths')
@@ -60,12 +60,12 @@ class Profile:
             if any(file_path is None for file_path in self.file_paths.values()):
                 print(f"[{time.strftime('%H:%M:%S')}] [ERROR] The configuration file does not contain all required file paths ...")
                 logging.error(f"The configuration file does not contain all required file paths")
-                print("\nExiting program ...\n")
+                print("Exiting program ...")
                 sys.exit(1)
         else:
             print(f"[{time.strftime('%H:%M:%S')}] [ERROR] File paths are not present in the configuration file ...")
             logging.error(f"File paths are not present in the configuration file")
-            print("\nExiting program ...\n")
+            print("Exiting program ...")
             sys.exit(1)
 
         self.containers = config.get('containers')
@@ -77,12 +77,12 @@ class Profile:
             if any(container_value is None for container_value in self.containers.values()):
                 print(f"[{time.strftime('%H:%M:%S')}] [ERROR] The configuration file does not contain all required container configurations ...")
                 logging.error(f"The configuration file does not contain all required container configurations")
-                print("\nExiting program ...\n")
+                print("Exiting program ...")
                 sys.exit(1)
         else:
             print(f"[{time.strftime('%H:%M:%S')}] [ERROR] Container configurations are not present in the configuration file ...")
             logging.error(f"Container configurations are not present in the configuration file")
-            print("\nExiting program ...\n")
+            print("Exiting program ...")
             sys.exit(1)
 
         self.ignored_ips = config.get('ignored_ips')
@@ -90,7 +90,7 @@ class Profile:
             if not isinstance(self.ignored_ips, list) or not all(isinstance(ip, str) for ip in self.ignored_ips):
                 print(f"[{time.strftime('%H:%M:%S')}] [ERROR] 'ignored_ips' must be a list of strings in the configuration file ...")
                 logging.error(f"'ignored_ips' must be a list of strings in the configuration file")
-                print("\nExiting program ...\n")
+                print("Exiting program ...")
                 sys.exit(1)
         else:
             self.ignored_ips = []
@@ -100,7 +100,7 @@ class Profile:
             if not isinstance(self.ignored_domains, list) or not all(isinstance(domain, str) for domain in self.ignored_domains):
                 print(f"[{time.strftime('%H:%M:%S')}] [ERROR] 'ignored_domains' must be a list of strings in the configuration file ...")
                 logging.error(f"'ignored_domains' must be a list of strings in the configuration file")
-                print("\nExiting program ...\n")
+                print("Exiting program ...")
                 sys.exit(1)
         else:
             self.ignored_domains = []
@@ -110,7 +110,7 @@ class Profile:
             if not isinstance(self.ignored_syscalls, list) or not all(isinstance(syscall, str) for syscall in self.ignored_syscalls):
                 print(f"[{time.strftime('%H:%M:%S')}] [ERROR] 'ignored_syscalls' must be a list of strings in the configuration file ...")
                 logging.error(f"'ignored_syscalls' must be a list of strings in the configuration file")
-                print("\nExiting program ...\n")
+                print("Exiting program ...")
                 sys.exit(1)
 
         self.terminal_size = None

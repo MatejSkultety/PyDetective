@@ -27,9 +27,9 @@ def banner():
 def is_system_platform_supported():
     machine_platform = platform.system().lower()
     if not machine_platform.startswith('linux'):
-        print(f"\n[{time.strftime('%H:%M:%S')}] [CRITICAL] This system platform is not supported")
+        print(f"[{time.strftime('%H:%M:%S')}] [CRITICAL] This system platform is not supported")
         logging.critical(f"Unsupported system platform")
-        print("\nExiting ...\n")
+        print("Exiting ...")
         sys.exit(1)
 
 
@@ -39,9 +39,9 @@ def is_root():
     Exits the program if not running as root.
     """
     if os.geteuid() != 0:
-        print(f"\n[{time.strftime('%H:%M:%S')}] [CRITICAL] This application must be run as root (sudo privileges required).")
+        print(f"[{time.strftime('%H:%M:%S')}] [CRITICAL] This application must be run as root (sudo privileges required).")
         logging.critical("Application not run as root (sudo required).")
-        print("\nExiting ...\n")
+        print("Exiting ...")
         sys.exit(1)
 
 
@@ -49,14 +49,14 @@ def is_valid_file(filename, filetype):
     if not os.path.exists(filename):
         print(f"[{time.strftime('%H:%M:%S')}] [ERROR] Provided file '{filename}' does not exist")
         logging.error(f"Provided file '{filename}' does not exist")
-        print("\nExiting program ...\n")
+        print("Exiting program ...")
         sys.exit(1)
     else:
         if filetype == "yaml":
             if not (filename.endswith(".yml") or filename.endswith(".yaml")):
                 print(f"[{time.strftime('%H:%M:%S')}] [ERROR] Provided file '{filename}' is not a yaml file")
                 logging.error(f"Provided file '{filename}' is not a yaml file")
-                print("\nExiting program ...\n")
+                print("Exiting program ...")
                 sys.exit(1)
     return True
 
@@ -70,12 +70,12 @@ def is_local_package(package_name):
             else:
                 print(f"[{time.strftime('%H:%M:%S')}] [ERROR] Provided path '{package_name}' is not a directory")
                 logging.error(f"Provided path '{package_name}' is not a directory")
-                print("\nExiting program ...\n")
+                print("Exiting program ...")
                 sys.exit(1)
         else:
             print(f"[{time.strftime('%H:%M:%S')}] [ERROR] Provided package path '{package_name}' does not exist")
             logging.error(f"Provided package path '{package_name}' does not exist")
-            print("\nExiting program ...\n")
+            print("Exiting program ...")
             sys.exit(1)
     else:
         return False
@@ -127,31 +127,31 @@ def check_required_structure(profile):
     if not os.path.isdir(sandbox_dir):
         print(f"[{time.strftime('%H:%M:%S')}] [ERROR] Sandbox folder is missing, please reference 'https://github.com/MatejSkultety/PyDetective/tree/main/sandbox")
         logging.error("Sandbox folder is missing, please reference 'https://github.com/MatejSkultety/PyDetective/tree/main/sandbox")
-        print("\nExiting program ...\n")
+        print("Exiting program ...")
         sys.exit(1)
 
     if not os.path.isdir(src_dir):
         print(f"[{time.strftime('%H:%M:%S')}] [ERROR] Src folder is missing, please reference 'https://github.com/MatejSkultety/PyDetective/tree/main/src ...")
         logging.error("Src folder is missing, please reference 'https://github.com/MatejSkultety/PyDetective/tree/main/src")
-        print("\nExiting program ...\n")
+        print("Exiting program ...")
         sys.exit(1)
 
     if not os.path.isfile(installation_script):
         print(f"[{time.strftime('%H:%M:%S')}] [ERROR] Installation script is missing, please reference 'https://github.com/MatejSkultety/PyDetective'")
         logging.error("Installation script is missing, please reference 'https://github.com/MatejSkultety/PyDetective'")
-        print("\nExiting program ...\n")
+        print("Exiting program ...")
         sys.exit(1)
 
     if missing_rules:
         print(f"[{time.strftime('%H:%M:%S')}] [ERROR] Rules for analysis are missing, create your own or reference 'https://github.com/MatejSkultety/PyDetective/tree/main/rules'")
         logging.error("Rules for analysis are missing, create your own or reference 'https://github.com/MatejSkultety/PyDetective/tree/main/rules'")
-        print("\nExiting program ...\n")
+        print("Exiting program ...")
         sys.exit(1)
 
     if missing_config_files:
         print(f"[{time.strftime('%H:%M:%S')}] [ERROR] Create the missing config files or download them from 'https://github.com/MatejSkultety/PyDetective/tree/main/config'")
         logging.error("Create the missing config files or download them from 'https://github.com/MatejSkultety/PyDetective/tree/main/config'")
-        print("\nExiting program ...\n")
+        print("Exiting program ...")
         sys.exit(1)
 
 
@@ -163,7 +163,7 @@ def load_config(filename):
     except yaml.parser.ParserError as e:
         print(f"[{time.strftime('%H:%M:%S')}] [ERROR] Error occurred while parsing the configuration file")
         logging.error(f"Error occurred while parsing the configuration file ({e})")
-        print("\nExiting program ...\n")
+        print("Exiting program ...")
         sys.exit(1)
 
 
@@ -273,7 +273,7 @@ def init_pydetective(args: argparse.Namespace) -> Profile:
     logging.info("Starting analysis")
     if not args.quiet:
         print(f"[{time.strftime('%H:%M:%S')}] [INFO] Everything is ready, starting analysis...")
-    print('-' * profile.terminal_size.columns)
+        print('.' * profile.terminal_size.columns)
 
     return profile
 
@@ -298,7 +298,7 @@ def main():
         except Exception as e:
             print(f"[{time.strftime('%H:%M:%S')}] [ERROR] Failed to download package '{profile.package_name}': {e}")
             logging.error(f"Failed to download package '{profile.package_name}': {e}")
-            print("\nExiting program ...\n")
+            print("Exiting program ...")
             sys.exit(1)
 
         verdict = runner.analyze_package(profile)
@@ -313,8 +313,8 @@ def main():
 
 
 
-    print('-' * profile.terminal_size.columns)
-    print(f"\n[{time.strftime('%H:%M:%S')}] [INFO] All done. Exiting program ...\n")
+    print('.' * profile.terminal_size.columns)
+    print(f"[{time.strftime('%H:%M:%S')}] [INFO] All done. Exiting program ...")
     logging.info("All done. Exiting program")
 
 

@@ -29,7 +29,7 @@ def build_sandbox_image(client: docker.client, build_path: str, image_tag: str) 
         path=build_path,
         tag=image_tag,
     )
-    logging.debug("Sandbox image built: ", sandbox_image[0].tags, sandbox_image[0].short_id)
+    logging.debug(f"Sandbox image built: {sandbox_image[0].tags}, {sandbox_image[0].short_id}")
     return sandbox_image
 
 

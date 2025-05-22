@@ -25,8 +25,8 @@ def install_archives(archives_path: str) -> None:
         archive_path = os.path.join(archives_path, archive)
         try:
             command = f"pip install --break-system-packages {archive_path}"
-            print(f"[{time.strftime('%H:%M:%S')}] [INFO] [CONTAINER] Installing archive '{archive_path}'")
-            installer = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE)
+            print(f"\n[{time.strftime('%H:%M:%S')}] [INFO] [CONTAINER] Installing archive '{archive_path}'")
+            installer = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
             installer.wait()
             print(f"[{time.strftime('%H:%M:%S')}] [INFO] [CONTAINER] Successfully installed '{archive_path}'.")
         except subprocess.CalledProcessError as e:
