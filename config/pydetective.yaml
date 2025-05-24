@@ -33,6 +33,7 @@ file_paths:
   pypi_projects_dependency_path: pyproject.toml
   config_folder_path: config
   src_folder_path: src
+  deepscan_output_path: /app/deepscan_output.txt
 
 ignored_ips:
   - 151.101.0.223
@@ -45,10 +46,8 @@ ignored_domains:
   - dualstack.python.map.fastly.net
 
 ignored_syscalls:
-
-  # deep scan calls
-  # - not (fd.name contains '/etc/shadow')
-  # - not (fd.name contains '/usr/local/lib/python3')
+  - not (proc.cmdline contains 'clamscan -i -r')
+  - not (proc.cmdline contains 'pip install --break-system-packages /app/archives/package')
 
 thresholds:
   MAX_FREQUENCY: 10 # percentage

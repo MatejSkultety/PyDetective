@@ -55,6 +55,7 @@ class Profile:
             self.pypi_projects_dependency_path = self.file_paths.get('pypi_projects_dependency_path')
             self.config_folder_path = self.file_paths.get('config_folder_path')
             self.src_folder_path = self.file_paths.get('src_folder_path')
+            self.deepscan_output_path = self.file_paths.get('deepscan_output_path')
 
             # Check if any required file path is missing
             if any(file_path is None for file_path in self.file_paths.values()):

@@ -64,15 +64,17 @@ def analyze_package(profile: profile.Profile) -> str:
         print(f"[{time.strftime('%H:%M:%S')}] [INFO] Starting network scan...")
     tcpdump_container = scanning.scan_network(profile.docker_client, sandbox_container, profile.network_output_path)
 
-    sandbox_container.wait()
-    containers.get_logs_from_container(sandbox_container, profile.logging_path, profile.args.verbose)
-    scanning.stop_network_scan(tcpdump_container, profile.network_output_path)
-    sysdig_process.kill()
-
     if profile.args.deep:
         logging.info("Performing deep analysis of sandbox container")
         if not profile.args.quiet:
-            print(f"[{time.strftime('%H:%M:%S')}] [INFO] Performing deep analysis of sandbox container...")
+            print(f"[{time.strftime('%H:%M:%S')}] [INFO] Performing deep analysis of sandbox container. This could take several minutes...")
+
+    sandbox_container.wait()
+    containers.get_logs_from_container(sandbox_container, profile.logging_path, profile.args.verbose)
+    if profile.args.deep:
+        containers.extract_file_from_container(sandbox_container, profile.deepscan_output_path, profile.output_folder_path)
+    scanning.stop_network_scan(tcpdump_container, profile.network_output_path)
+    sysdig_process.kill()
 
     logging.info("Instalation complete. Removing sandbox container")
     if not profile.args.quiet:

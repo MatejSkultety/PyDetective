@@ -5,6 +5,7 @@ import argparse
 
 
 ARCHIVES_PATH = "/app/archives"
+DEEPSCAN_OUTPUT = "/app/deepscan_output.txt"
 
 
 def install_archives(archives_path: str) -> None:
@@ -44,9 +45,7 @@ def scan_sandbox() -> None:
         None
     """
     print(f"[{time.strftime('%H:%M:%S')}] [INFO] [CONTAINER] Scanning entire sandbox OS ...")
-    command = "chkrootkit -q"
-    # subprocess.Popen(command, shell=True).wait()
-    command = "freshclam && clamscan -i -r /"
+    command = f"clamscan -i -r /home /tmp /var/tmp /etc /boot /usr/local/bin /lib /lib64 /usr/lib > {DEEPSCAN_OUTPUT}"
     subprocess.Popen(command, shell=True).wait()
 
 

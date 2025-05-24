@@ -7,7 +7,7 @@ RUN apt-get update && \
     apt-get install -y clamav clamav-daemon && \
     apt-get install -y clamav-daemon && \
     apt-get install -y clamav-freshclam && \
-    apt-get install -y chkrootkit && \
-    apt-get clean
+    apt-get clean && \
+    freshclam
 
 COPY executor.py /app/executor.py
