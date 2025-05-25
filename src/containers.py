@@ -144,13 +144,12 @@ def get_logs_from_container(sandbox_container: docker.models.containers.Containe
         print(logs.decode("utf-8"))
 
 
-def download_package(profile: profile.Profile, local_package: bool) -> str:
+def download_package(profile: profile.Profile) -> str:
     """
     Downloads a Python package using `pip download`, extracts it, and returns the name of the downloaded package folder.
 
     Args:
         profile (profile.Profile): The profile instance containing configuration.
-        local_package (bool): Flag to indicate if the package is a local package.
         
     Returns:
         str: Path to the downloaded package folder.
@@ -158,12 +157,13 @@ def download_package(profile: profile.Profile, local_package: bool) -> str:
     # Make sure the destination is clean
     delete_package(profile.archives_path)
     delete_package(profile.extracted_path)
-    if local_package:
+    if profile.local_package:
         logging.info("Processing local package")
         if profile.args.verbose:
             print(f"[{time.strftime('%H:%M:%S')}] [INFO] Processing local package...")
         try:
             if profile.package_name.endswith(".tar.gz") or profile.package_name.endswith(".whl"):
+                os.makedirs(profile.archives_path, exist_ok=True)
                 shutil.copy(profile.package_name, profile.archives_path)
                 extract_package(profile.archives_path, profile.extracted_path)
             else:

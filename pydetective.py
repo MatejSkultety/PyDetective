@@ -67,6 +67,9 @@ def is_local_package(package_name):
             if os.path.isdir(package_name):
                 logging.info(f"Local package '{package_name}' found")
                 return True
+            elif package_name.endswith('.tar.gz') or package_name.endswith('.whl'):
+                logging.info(f"Local package archive '{package_name}' found")
+                return True
             else:
                 print(f"[{time.strftime('%H:%M:%S')}] [ERROR] Provided path '{package_name}' is not a directory")
                 logging.error(f"Provided path '{package_name}' is not a directory")
@@ -336,9 +339,9 @@ def main():
 
 
 
-        local_package = is_local_package(profile.package_name)
+        profile.local_package = is_local_package(profile.package_name)
         try:
-            package_path = containers.download_package(profile, local_package)
+            package_path = containers.download_package(profile)
         except Exception as e:
             print(f"[{time.strftime('%H:%M:%S')}] [ERROR] Failed to download package '{profile.package_name}': {e}")
             logging.error(f"Failed to download package '{profile.package_name}': {e}")
@@ -348,7 +351,7 @@ def main():
         verdict = runner.analyze_package(profile)
 
         if args.install and verdict == evaluation.Verdict.SAFE.value:
-            runner.install_package_on_host(package_path, local_package)
+            runner.install_package_on_host(package_path, profile.local_package)
 
         if not args.keep_files:
             containers.delete_package(profile.downloaded_package_path)

@@ -15,6 +15,7 @@ class Profile:
         self.yara_rules = None
         self.package_name = None
         self.database_connection = None
+        self.local_package = False
 
         self.enrichment_services = config.get('enrichment_services')
         if self.enrichment_services:
