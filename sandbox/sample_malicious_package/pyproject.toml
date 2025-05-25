@@ -1,6 +1,8 @@
 [project]
 name = "sample_malicious_package"
 version = "0.0.1"
+author = "Matej Skultety"
+author_email = "xskultety@stuba.sk"
 description = "A small sample malicious package"
 requires-python = ">=3.7"
 classifiers = [

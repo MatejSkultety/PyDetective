@@ -8,6 +8,9 @@ from rich.console import Console
 from rich.table import Table
 from rich.panel import Panel
 from rich import box
+import subprocess
+import pkginfo
+import os
 
 from . import profile
 
@@ -215,6 +218,7 @@ def evaluate_package(profile: profile.Profile, static_result: dict = None) -> di
         static_result = evaluate_static_results(profile.static_result_path)
     post_install_result = evaluate_post_install_results(profile.post_install_result_path)
 
+    print(f"[{time.strftime('%H:%M:%S')}] [INFO] Evaluating package '{profile.package_name}'")
     # Aggregate results
     verdicts = set()
     verdicts.add(network_result["verdict"])
@@ -227,10 +231,8 @@ def evaluate_package(profile: profile.Profile, static_result: dict = None) -> di
         final_verdict = Verdict.DANGEROUS.value
     else:
         final_verdict = Verdict.SAFE.value
-
-    # Create the final result dictionary
     evaluation_result = {
-        "metadata": get_package_metadata_from_pyproject(profile.archives_path),
+        "metadata": get_package_metadata(profile),
         "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
         "final_verdict": final_verdict,
         "evaluations": {
@@ -240,15 +242,59 @@ def evaluate_package(profile: profile.Profile, static_result: dict = None) -> di
             "post_install": post_install_result
         }
     }
-
+    logging.debug("Storing evaluation result in MySQL database")
     store_evaluation_result(profile, evaluation_result)
     print_evaluation_result(profile, evaluation_result)
 
     return evaluation_result
 
 
-def get_package_metadata_from_pyproject(package_path: str) -> dict:
-    pass 
+def get_package_metadata(profile: profile.Profile) -> dict:
+    if not profile.local_package:
+        metadata_retrieval_command = f"curl https://pypi.org/pypi/{profile.package_name}/json"
+        try:
+            result = subprocess.run(metadata_retrieval_command, shell=True, capture_output=True, text=True)
+            if result.returncode == 0:
+                metadata = json.loads(result.stdout).get("info", {})
+                return {
+                    "package_name": profile.package_name,
+                    "version": metadata.get("version", ""),
+                    "author": metadata.get("author", ""),
+                    "author_email": metadata.get("author_email", ""),
+                    "home_page": metadata.get("home_page", ""),
+                    "package_url": metadata.get("package_url", "")
+                }
+            else:
+                logging.error(f"Failed to retrieve package metadata: {result.stderr}")
+                return {}
+        except Exception as e:
+            logging.error(f"Error retrieving package metadata: {e}")
+            return {}
+    else:
+        try:
+            if profile.package_name.endswith(".whl"):
+                metadata = pkginfo.Wheel(profile.package_name)
+            elif profile.package_name.endswith(".tar.gz"):
+                metadata = pkginfo.SDist(profile.package_name)
+            else:
+                info_path = str(profile.package_name + "/pyproject.toml")
+                if not os.path.exists(info_path):
+                    return {}
+                with open(info_path, 'r') as file:
+                    pyproject = toml.load(file)
+                    metadata = pyproject.get("project", {})
+            meta_dict = {
+                "package_name": getattr(metadata, "name", "") or profile.package_name,
+                "version": getattr(metadata, "version", ""),
+                "author": getattr(metadata, "author", ""),
+                "author_email": getattr(metadata, "author_email", ""),
+                "home_page": getattr(metadata, "home_page", ""),
+                "package_url": getattr(metadata, "package_url", "")
+            }
+            return meta_dict
+        except Exception as e:
+            logging.error(f"Error reading local package metadata: {e}")
+            return {}
 
 
 def print_evaluation_result(profile: profile.Profile, evaluation_result: dict) -> None:
@@ -263,7 +309,7 @@ def print_evaluation_result(profile: profile.Profile, evaluation_result: dict) -
     header = f"[bold]PyDetective Analysis Result[/bold]\n[dim]Timestamp:[/dim] {timestamp}\n[dim]Final Verdict:[/dim] [bold]{final_verdict}[/bold]"
     console.print(Panel(header, expand=False))
 
-    if metadata:
+    if metadata and not profile.args.quiet:
         meta_table = Table(title="Package Metadata", box=box.SIMPLE)
         meta_table.add_column("Key", style="bold")
         meta_table.add_column("Value")
@@ -370,8 +416,8 @@ def read_db_results(profile: profile.Profile) -> None:
             )
             rows = cursor.fetchall()
             if not rows:
-                print(f"[{time.strftime('%H:%M:%S')}] [WARNING] No results found for package '{profile.args.database}' in the database.")
-                print("Try running the analysis first or use -db ALL to see all results.")
+                print(f"[{time.strftime('%H:%M:%S')}] [WARNING] No results found for package "
+                      f"'{profile.args.database}' in the database. Try running the analysis first or use -db ALL to see all results.")
                 return
             for row in rows:
                 evaluation_result = json.loads(row[0])
