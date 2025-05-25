@@ -14,6 +14,7 @@ class Profile:
         self.docker_client = None
         self.yara_rules = None
         self.package_name = None
+        self.database_connection = None
 
         self.enrichment_services = config.get('enrichment_services')
         if self.enrichment_services:
@@ -24,6 +25,20 @@ class Profile:
         else:
             print(f"[{time.strftime('%H:%M:%S')}] [ERROR] Container configurations are not present in the configuration file ...")
             logging.error(f"Container configurations are not present in the configuration file")
+            print("Exiting program ...")
+            sys.exit(1)
+
+        self.database = config.get('database')
+        if self.database:
+            self.db_host = self.database.get('host')
+            self.db_name = self.database.get('database_name')
+            self.db_user = self.database.get('user')
+            self.db_password = self.database.get('password')
+            self.db_table = self.database.get('table')
+
+        else:
+            print(f"[{time.strftime('%H:%M:%S')}] [ERROR] Database configurations are not present in the configuration file ...")
+            logging.error(f"Database configurations are not present in the configuration file")
             print("Exiting program ...")
             sys.exit(1)
 

@@ -6,6 +6,9 @@ set -e
 VENV_DIR="venv"
 REQUIREMENTS_FILE="requirements.txt"
 PYTHON_MIN_VERSION="3.7"
+DB_NAME="pydetective_db"
+DB_USER="pydetective_user"
+DB_PASS="pydetective_password"
 MAIN_SCRIPT="main.py"
 
 # --- Tools to check/install ---
@@ -90,6 +93,21 @@ function setup_virtualenv() {
     fi
 }
 
+function setup_database() {
+    log "Installing MySQL Server..."
+    sudo apt-get update
+    sudo apt-get install -y mysql-server
+
+    log "Configuring MySQL database and user..."
+    sudo mysql <<EOF
+CREATE DATABASE IF NOT EXISTS ${DB_NAME};
+CREATE USER IF NOT EXISTS '${DB_USER}'@'localhost' IDENTIFIED BY '${DB_PASS}';
+GRANT ALL PRIVILEGES ON ${DB_NAME}.* TO '${DB_USER}'@'localhost';
+FLUSH PRIVILEGES;
+EOF
+    log "Database setup complete."
+}
+
 function run_main() {
     if [[ -f "$MAIN_SCRIPT" ]]; then
         log "Running $MAIN_SCRIPT..."
@@ -112,4 +130,8 @@ log "Ensuring Python and pip..."
 ensure_python
 
 setup_virtualenv
+
+log "Setting up MySQL database..."
+setup_database
+
 run_main

@@ -229,7 +229,7 @@ def evaluate_package(profile: profile.Profile, static_result: dict = None) -> di
         final_verdict = Verdict.SAFE.value
 
     # Create the final result dictionary
-    package_evaluation = {
+    evaluation_result = {
         "metadata": get_package_metadata_from_pyproject(profile.archives_path),
         "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
         "final_verdict": final_verdict,
@@ -241,19 +241,14 @@ def evaluate_package(profile: profile.Profile, static_result: dict = None) -> di
         }
     }
 
-    export_results(profile, package_evaluation)
+    store_evaluation_result(profile, evaluation_result)
+    print_evaluation_result(profile, evaluation_result)
 
-    return package_evaluation
+    return evaluation_result
 
 
 def get_package_metadata_from_pyproject(package_path: str) -> dict:
-    pass
-
-
-def export_results(profile: profile.Profile, evaluation_result: dict) -> None:
-    with open(profile.evaluation_output_path, "w") as file:
-        json.dump(evaluation_result, file, indent=4)
-    print_evaluation_result(profile, evaluation_result)
+    pass 
 
 
 def print_evaluation_result(profile: profile.Profile, evaluation_result: dict) -> None:
@@ -313,8 +308,7 @@ def print_evaluation_result(profile: profile.Profile, evaluation_result: dict) -
                             str(issue.get("rule", "")),
                         )
                 console.print(table)
-    store_evaluation_result(profile, evaluation_result)
-    if profile.args.write:
+    if profile.args.write and not profile.args.database:
         export_results_to_file(profile, evaluation_result, console)
 
 
@@ -341,5 +335,46 @@ def export_results_to_file(profile: profile.Profile, evaluation_result: dict, co
         print(f"[{time.strftime('%H:%M:%S')}] [WARNING] Unsuported output format. Results exported to {export_path} as JSON.")
 
 
-# def store_evaluation_result(profile: profile.Profile, evaluation_result: dict) -> None:
-    
+def store_evaluation_result(profile: profile.Profile, evaluation_result: dict) -> None:
+    verdict = evaluation_result.get("final_verdict", "")
+    try:
+        cursor = profile.database_connection.cursor()
+        cursor.execute(
+            f"INSERT INTO {profile.db_table} (package_name, timestamp, verdict, evaluation_result) VALUES (%s, %s, %s, %s)",
+            (profile.package_name, profile.analysis_timestamp, verdict, json.dumps(evaluation_result))
+        )
+        profile.database_connection.commit()
+        logging.info(f"Evaluation result stored in MySQL for package {profile.package_name}")
+    except Exception as e:
+        logging.error(f"Failed to store evaluation result in MySQL: {e}")
+
+
+def read_db_results(profile: profile.Profile) -> None:
+    try:
+        cursor = profile.database_connection.cursor()
+        if profile.args.database.lower() == "all":
+            cursor.execute(f"SELECT package_name, timestamp, verdict FROM {profile.db_table}")
+            rows = cursor.fetchall()
+            console = Console()
+            table = Table(title="PyDetective Results History")
+            table.add_column("Package Name", style="bold")
+            table.add_column("Timestamp")
+            table.add_column("Verdict")
+            for package_name, timestamp, verdict in rows:
+                table.add_row(str(package_name), str(timestamp), str(verdict))
+            console.print(table)
+        else:
+            cursor.execute(
+                f"SELECT evaluation_result FROM {profile.db_table} WHERE package_name = %s",
+                (profile.args.database,)
+            )
+            rows = cursor.fetchall()
+            if not rows:
+                print(f"[{time.strftime('%H:%M:%S')}] [WARNING] No results found for package '{profile.args.database}' in the database.")
+                print("Try running the analysis first or use -db ALL to see all results.")
+                return
+            for row in rows:
+                evaluation_result = json.loads(row[0])
+                print_evaluation_result(profile, evaluation_result)
+    except Exception as e:
+        logging.error(f"Failed to read results from MySQL: {e}")

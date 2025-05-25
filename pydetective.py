@@ -7,10 +7,10 @@ import sys
 import time
 import yaml
 import docker
+import mysql.connector
 
 from src.profile import Profile
-from src.evaluation import Verdict
-from src import runner, containers, scanning, analysis
+from src import runner, containers, evaluation, analysis
 
 
 def banner():
@@ -177,9 +177,10 @@ def arg_formatter():
 
 def parse_arguments():
     parser = argparse.ArgumentParser(formatter_class=arg_formatter(), prog='pydetective', description='Tool for detecting dangerous Python packages.')
-    exclusive_group = parser.add_mutually_exclusive_group(required=True)
-    exclusive_group.add_argument('package_name', nargs='?', metavar='PACKAGE', help='Name of the package to analyze (e.g. "requests") or path to local package (e.g. "path/to/package") or .txt file with list of packages (e.g. "path/to/requirements.txt")')
-    exclusive_group.add_argument('-t', '--test', action='store_true', help="Testing mode, execute analysis of sample package")
+    mode_group = parser.add_mutually_exclusive_group(required=True)
+    mode_group.add_argument('package_name', nargs='?', metavar='PACKAGE', help='Name of the package to analyze (e.g. "requests") or path to local package (e.g. "path/to/package") or .txt file with list of packages (e.g. "path/to/requirements.txt")')
+    mode_group.add_argument('-t', '--test', action='store_true', help="Testing mode, execute analysis of sample package")
+    mode_group.add_argument('-db', '--database', metavar='PACKAGE', help="Display history of analyzed package from MySQL database or entire database if 'ALL' is specified")
     parser.add_argument('-i', '--install', action='store_true', help="After analysis, (if safe) install the package on a host environment")
     parser.add_argument('-k', '--keep_files', action='store_true', help="Don't delete downloaded package files after analysis (sandbox/downloaded_package)")
     parser.add_argument('-c', '--config', metavar='FILE', default='config/pydetective.yaml', help="Configuration file (default: 'config/pydetective.yaml')")
@@ -230,6 +231,34 @@ def init_logger():
     logger = logging.getLogger('__name__')
 
 
+def init_database(profile: Profile):
+
+    try:
+        connection = mysql.connector.connect(
+            host=profile.db_host,
+            user=profile.db_user,
+            password=profile.db_password,
+            database=profile.db_name
+        )
+        cursor = connection.cursor()
+        cursor.execute(f"""
+            CREATE TABLE IF NOT EXISTS {profile.db_table} (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                package_name VARCHAR(255),
+                timestamp VARCHAR(32),
+                verdict VARCHAR(16),
+                evaluation_result JSON
+            )
+        """)
+        connection.commit()
+    except Exception as e:
+        logging.error(f"Failed to initialize MySQL database: {e}")
+        print(f"[{time.strftime('%H:%M:%S')}] [WARNING] Failed to initialize MySQL database: {e}")
+        return None
+    else:
+        return connection
+
+
 def init_pydetective(args: argparse.Namespace) -> Profile:
 
     init_logger()
@@ -266,14 +295,16 @@ def init_pydetective(args: argparse.Namespace) -> Profile:
             logging.error(f"Failed to delete {file_path}: {e}")
 
     profile.docker_client = docker.from_env()
-    logging.info("Compiling detection rules")
-    if not args.quiet:
-        print(f"[{time.strftime('%H:%M:%S')}] [INFO] Compiling detection rules...")
-    profile.yara_rules = analysis.compile_yara_rules(profile.static_rules_folder_path)
-    logging.info("Starting analysis")
-    if not args.quiet:
-        print(f"[{time.strftime('%H:%M:%S')}] [INFO] Everything is ready, starting analysis...")
-        print('.' * profile.terminal_size.columns)
+    profile.database_connection = init_database(profile)
+    if profile.args.database is None:
+        logging.info("Compiling detection rules")
+        if not args.quiet:
+            print(f"[{time.strftime('%H:%M:%S')}] [INFO] Compiling detection rules...")
+        profile.yara_rules = analysis.compile_yara_rules(profile.static_rules_folder_path)
+        logging.info("Starting analysis")
+        if not args.quiet:
+            print(f"[{time.strftime('%H:%M:%S')}] [INFO] Everything is ready, starting analysis...")
+            print('.' * profile.terminal_size.columns)
 
     return profile
 
@@ -285,6 +316,19 @@ def main():
     if not args.quiet:
         banner()
     profile = init_pydetective(args)
+
+    if args.database is not None:
+        logging.debug(f"Database mode activated for package '{args.database}'")
+        try:
+            evaluation.read_db_results(profile)
+        except Exception as e:
+            print(f"[{time.strftime('%H:%M:%S')}] [ERROR] Database connection failed: {e}")
+            logging.error(f"Database connection failed: {e}")
+        print('.' * profile.terminal_size.columns)
+        print(f"[{time.strftime('%H:%M:%S')}] [INFO] All done. Exiting program ...")
+        logging.info("All done. Exiting program")
+        sys.exit(0)
+
 
     packages_to_analyze = parse_requirements_file(profile.package_name)
     for package_to_analyze in packages_to_analyze:
@@ -303,7 +347,7 @@ def main():
 
         verdict = runner.analyze_package(profile)
 
-        if args.install and verdict == Verdict.SAFE.value:
+        if args.install and verdict == evaluation.Verdict.SAFE.value:
             runner.install_package_on_host(package_path, local_package)
 
         if not args.keep_files:
