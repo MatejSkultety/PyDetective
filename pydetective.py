@@ -181,7 +181,7 @@ def parse_arguments():
     exclusive_group.add_argument('package_name', nargs='?', metavar='PACKAGE', help='Name of the package to analyze (e.g. "requests") or path to local package (e.g. "path/to/package") or .txt file with list of packages (e.g. "path/to/requirements.txt")')
     exclusive_group.add_argument('-t', '--test', action='store_true', help="Testing mode, execute analysis of sample package")
     parser.add_argument('-i', '--install', action='store_true', help="After analysis, (if safe) install the package on a host environment")
-    parser.add_argument('-k', '--keep-files', action='store_true', help="Don't delete downloaded package files after analysis (sandbox/downloaded_package)")
+    parser.add_argument('-k', '--keep_files', action='store_true', help="Don't delete downloaded package files after analysis (sandbox/downloaded_package)")
     parser.add_argument('-c', '--config', metavar='FILE', default='config/pydetective.yaml', help="Configuration file (default: 'config/pydetective.yaml')")
     details_level_group = parser.add_mutually_exclusive_group()
     details_level_group.add_argument('-q', '--quiet', action='store_true', help='Do not print banner')

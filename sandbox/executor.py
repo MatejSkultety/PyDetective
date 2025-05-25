@@ -5,7 +5,7 @@ import argparse
 
 
 ARCHIVES_PATH = "/app/archives"
-DEEPSCAN_OUTPUT = "/app/deepscan_output.txt"
+DEEPSCAN_OUTPUT = "/app/deepscan_result.txt"
 
 
 def install_archives(archives_path: str) -> None:
