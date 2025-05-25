@@ -11,6 +11,7 @@ from rich import box
 import subprocess
 import pkginfo
 import os
+import weasyprint
 
 from . import profile
 
@@ -370,9 +371,11 @@ def export_results_to_file(profile: profile.Profile, evaluation_result: dict, co
         with open(export_path, 'w') as file:
             file.write(console.export_html())
         logging.info(f"Results exported to {export_path}")
-    elif export_format == 'pdf': # TODO: Implement PDF export
-        with open(export_path, 'w') as file:
-            file.write(console.export_html())
+    elif export_format == 'pdf':
+        html_content = console.export_html()
+        pdf_content = weasyprint.HTML(string=html_content).write_pdf()
+        with open(export_path, 'wb') as file:
+            file.write(pdf_content)
         logging.info(f"Results exported to {export_path}")
     else:
         with open(export_path, 'w') as file:
