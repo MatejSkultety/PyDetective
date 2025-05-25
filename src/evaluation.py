@@ -1,19 +1,20 @@
 import json
 from datetime import datetime
+import time
 import toml
+import logging
 from enum import Enum
 from rich.console import Console
 from rich.table import Table
 from rich.panel import Panel
 from rich import box
-import weasyprint
 
 from . import profile
 
 
 class Verdict(Enum):
     SAFE = "SAFE"
-    DANGEROUS = "DANGEROUS"
+    DANGEROUS = "SUSPICIOUS"
     MALICIOUS = "MALICIOUS"
 
 
@@ -177,14 +178,33 @@ def evaluate_static_results(source_path: str) -> dict:
     return result
 
 
-def evaluate_post_install_results(*args, **kwargs):
-    # Placeholder implementation
-    return {
+def evaluate_post_install_results(source_path: str) -> dict:
+    result = {
         "warnings": 0,
         "errors": 0,
         "verdict": Verdict.SAFE.value,
         "issues": []
     }
+    try:
+        with open(source_path, "r") as file:
+            for line in file:
+                if "SCAN SUMMARY" in line:
+                    break
+                if line.strip():
+                    result["issues"].append({
+                        "priority": "ERROR",
+                        "rule": "Detected issue",
+                        "output": line.strip()
+                    })
+                    result["errors"] += 1
+    except FileNotFoundError:
+        logging.error(f"Post-install result file not found: {source_path}")
+    if result["errors"] > 0:
+        result["verdict"] = Verdict.MALICIOUS.value
+    else:
+        result["verdict"] = Verdict.SAFE.value
+
+    return result
 
 
 def evaluate_package(profile: profile.Profile, static_result: dict = None) -> dict:
@@ -293,12 +313,33 @@ def print_evaluation_result(profile: profile.Profile, evaluation_result: dict) -
                             str(issue.get("rule", "")),
                         )
                 console.print(table)
-    html_content = console.export_html()
-    html_path = "out/evaluation_result.html"
-    with open(html_path, "w") as f:
-        f.write(html_content)
-    pdf_path = "out/evaluation_result.pdf"
-    weasyprint.HTML(string=html_content).write_pdf(pdf_path)
+    store_evaluation_result(profile, evaluation_result)
+    if profile.args.write:
+        export_results_to_file(profile, evaluation_result, console)
 
-def export_results_html(profile: profile.Profile, evaluation_result: dict) -> None:
-    pass
+
+def export_results_to_file(profile: profile.Profile, evaluation_result: dict, console: Console) -> None:
+    
+    export_path = profile.args.write
+    export_format = export_path.split('.')[-1].lower()
+    if export_format == 'json':
+        with open(export_path, 'w') as file:
+            json.dump(evaluation_result, file, indent=4)
+        logging.info(f"Results exported to {export_path}")
+    elif export_format == 'html':
+        with open(export_path, 'w') as file:
+            file.write(console.export_html())
+        logging.info(f"Results exported to {export_path}")
+    elif export_format == 'pdf': # TODO: Implement PDF export
+        with open(export_path, 'w') as file:
+            file.write(console.export_html())
+        logging.info(f"Results exported to {export_path}")
+    else:
+        with open(export_path, 'w') as file:
+            json.dump(evaluation_result, file, indent=4)
+        logging.info(f"Unsuported format. Results exported to {export_path} as JSON")
+        print(f"[{time.strftime('%H:%M:%S')}] [WARNING] Unsuported output format. Results exported to {export_path} as JSON.")
+
+
+# def store_evaluation_result(profile: profile.Profile, evaluation_result: dict) -> None:
+    
