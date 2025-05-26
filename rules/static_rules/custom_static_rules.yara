@@ -29,7 +29,6 @@ rule Suspicious_SSH_Key_Access
         $expanduser = "os.path.expanduser" nocase ascii wide
         $id_rsa = "id_rsa" nocase ascii wide
         $id_ed25519 = "id_ed25519" nocase ascii wide
-        $private = "PRIVATE KEY" nocase ascii wide
     condition:
         ($ssh_dir or $id_rsa or $id_ed25519) and $open_r and $expanduser
 }
