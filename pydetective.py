@@ -248,8 +248,10 @@ def init_database(profile: Profile):
             CREATE TABLE IF NOT EXISTS {profile.db_table} (
                 id INT AUTO_INCREMENT PRIMARY KEY,
                 package_name VARCHAR(255),
-                timestamp VARCHAR(32),
+                version VARCHAR(64),
                 verdict VARCHAR(16),
+                timestamp VARCHAR(32),
+                hash VARCHAR(64) UNIQUE,
                 evaluation_result JSON
             )
         """)

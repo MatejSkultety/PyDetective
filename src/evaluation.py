@@ -12,6 +12,7 @@ import subprocess
 import pkginfo
 import os
 import weasyprint
+import hashlib
 
 from . import profile
 
@@ -386,11 +387,13 @@ def export_results_to_file(profile: profile.Profile, evaluation_result: dict, co
 
 def store_evaluation_result(profile: profile.Profile, evaluation_result: dict) -> None:
     verdict = evaluation_result.get("final_verdict", "")
+    version = evaluation_result.get("metadata", {}).get("version", "")
+    hash = get_result_hash(evaluation_result)
     try:
         cursor = profile.database_connection.cursor()
         cursor.execute(
-            f"INSERT INTO {profile.db_table} (package_name, timestamp, verdict, evaluation_result) VALUES (%s, %s, %s, %s)",
-            (profile.package_name, profile.analysis_timestamp, verdict, json.dumps(evaluation_result))
+            f"INSERT IGNORE INTO {profile.db_table} (package_name, version, verdict, timestamp, hash, evaluation_result) VALUES (%s, %s, %s, %s, %s, %s)",
+            (profile.package_name, version, verdict, profile.analysis_timestamp, hash, json.dumps(evaluation_result))
         )
         profile.database_connection.commit()
         logging.info(f"Evaluation result stored in MySQL for package {profile.package_name}")
@@ -398,19 +401,48 @@ def store_evaluation_result(profile: profile.Profile, evaluation_result: dict) -
         logging.error(f"Failed to store evaluation result in MySQL: {e}")
 
 
+def get_result_hash(evaluation_result: dict) -> str:
+    """
+    Generate a hash for the evaluation result to ensure uniqueness.
+    Uses MD5 hashing on specific package metadata and evaluation details.
+
+    Args:
+        evaluation_result (dict): The evaluation result dictionary containing metadata and evaluations.
+    Returns:
+        str: A unique hash string representing the evaluation result.
+    """
+    metadata = evaluation_result.get("metadata", {})
+    package_name = metadata.get("package_name", "")
+    version = metadata.get("version", "")
+    final_verdict = evaluation_result.get("final_verdict", "")
+
+    evaluations = evaluation_result.get("evaluations", {})
+    eval_summary = []
+    for section, section_data in sorted(evaluations.items()):
+        verdict = section_data.get("verdict", "")
+        errors = section_data.get("errors", 0)
+        warnings = section_data.get("warnings", 0)
+        eval_summary.append(f"{section}:{verdict}:{errors}:{warnings}")
+
+    hash_input = f"{package_name},{version},{final_verdict}," + ",".join(eval_summary)
+    logging.debug(f"Generating hash for evaluation result: {hash_input}")
+    return hashlib.md5(hash_input.encode()).hexdigest()
+
+
 def read_db_results(profile: profile.Profile) -> None:
     try:
         cursor = profile.database_connection.cursor()
         if profile.args.database.lower() == "all":
-            cursor.execute(f"SELECT package_name, timestamp, verdict FROM {profile.db_table}")
+            cursor.execute(f"SELECT package_name, version, verdict, timestamp FROM {profile.db_table}")
             rows = cursor.fetchall()
             console = Console()
             table = Table(title="PyDetective Results History")
             table.add_column("Package Name", style="bold")
-            table.add_column("Timestamp")
+            table.add_column("Version")
             table.add_column("Verdict")
-            for package_name, timestamp, verdict in rows:
-                table.add_row(str(package_name), str(timestamp), str(verdict))
+            table.add_column("Timestamp")
+            for package_name, version, verdict, timestamp in rows:
+                table.add_row(str(package_name), str(version), str(verdict), str(timestamp))
             console.print(table)
         else:
             cursor.execute(
