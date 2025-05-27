@@ -285,12 +285,12 @@ def get_package_metadata(profile: profile.Profile) -> dict:
                     pyproject = toml.load(file)
                     metadata = pyproject.get("project", {})
             meta_dict = {
-                "package_name": getattr(metadata, "name", "") or profile.package_name,
-                "version": getattr(metadata, "version", ""),
-                "author": getattr(metadata, "author", ""),
-                "author_email": getattr(metadata, "author_email", ""),
-                "home_page": getattr(metadata, "home_page", ""),
-                "package_url": getattr(metadata, "package_url", "")
+                "package_name": metadata.get("name", "") or profile.package_name,
+                "version": metadata.get("version", ""),
+                "author": metadata.get("authors", [{}])[0].get("name", "") if "authors" in metadata else "",
+                "author_email": metadata.get("authors", [{}])[0].get("email", "") if "authors" in metadata else "",
+                "home_page": metadata.get("home_page", ""),
+                "package_url": metadata.get("package_url", "")
             }
             return meta_dict
         except Exception as e:
