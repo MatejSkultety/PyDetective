@@ -71,6 +71,7 @@ rule Suspicious_Persistence_Simulation
         description = "Detects code that creates persistence mechanisms (e.g., crontab, autorun, registry run keys, systemd)."
         author = "Matej Skultety"
         category = "persistence"
+        priority = "low"
     strings:
         $cron = "crontab" nocase ascii wide
         $autorun = "autorun" nocase ascii wide
@@ -104,6 +105,7 @@ rule Suspicious_Binary_Exec
         description = "Detects code execution from binary blobs (e.g., exec on decoded bytes, suspicious byte strings)."
         author = "Matej Skultety"
         category = "obfuscation"
+        priority = "low"
     strings:
         $exec = "exec(" nocase ascii wide
         $decode = ".decode('utf-8')" nocase ascii wide
