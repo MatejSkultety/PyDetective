@@ -55,7 +55,7 @@ def evaluate_network_results(profile: profile.Profile) -> dict:
                     if ip_info.get("otx_malicious"):
                         issue = {
                             "priority": "HIGH",
-                            "rule": f"Dangerous IP accessed: {ip_info.get('ip', '')} - {ip_info.get('asn_description', '')}",
+                            "rule": "Dangerous IP accessed",
                             "output": ip_info
                         }
                         result["issues"].append(issue)
@@ -63,7 +63,7 @@ def evaluate_network_results(profile: profile.Profile) -> dict:
                 else:
                     issue = {
                         "priority": "LOW",
-                        "rule": f"IP without OTX details accessed {ip_info.get('ip', '')}",
+                        "rule": "IP without OTX details accessed",
                         "output": ip_info
                     }
                     result["issues"].append(issue)
@@ -71,7 +71,7 @@ def evaluate_network_results(profile: profile.Profile) -> dict:
             except Exception:
                 issue = {
                     "priority": "LOW",
-                    "rule": f"IP {ip_info.get('ip', 'unknown')} - Could not evaluate",
+                    "rule": "Could not evaluate IP address",
                     "output": ip_info
                 }
                 result["issues"].append(issue)
@@ -82,7 +82,7 @@ def evaluate_network_results(profile: profile.Profile) -> dict:
                 if "otx_malicious" in domain_info and domain_info.get("otx_malicious"):
                     issue = {
                         "priority": "HIGH",
-                        "rule": f"Dangerous domain accessed: {domain_info.get('domain', '')}",
+                        "rule": "Dangerous domain accessed",
                         "output": domain_info
                     }
                     result["issues"].append(issue)
@@ -90,7 +90,7 @@ def evaluate_network_results(profile: profile.Profile) -> dict:
                 else:   
                     issue = {
                         "priority": "LOW",
-                        "rule": f"Unexpected domain accessed: {domain_info.get('domain', '')}",
+                        "rule": "Unexpected domain accessed",
                         "output": domain_info
                     }
                     result["issues"].append(issue)
@@ -98,7 +98,7 @@ def evaluate_network_results(profile: profile.Profile) -> dict:
             except Exception:
                 issue = {
                     "priority": "LOW",
-                    "rule": f"Domain {domain_info.get('domain', 'unknown')} - Could not evaluate",
+                    "rule": "Could not evaluate domain",
                     "output": domain_info
                 }
                 result["issues"].append(issue)
@@ -393,10 +393,12 @@ def create_metadata_table(metadata: dict) -> rich.table.Table:
     Returns:
         rich.table.Table: A table containing the package metadata with keys and values.
     """
-    table = rich.table.Table(title="Package Metadata", box=rich.box.SIMPLE)
+    table = rich.table.Table(title="Package Metadata", box=rich.box.MINIMAL)
     table.add_column("Key", style="bold")
     table.add_column("Value")
     for k, v in metadata.items():
+        if v is None:
+            v = "N/A"
         table.add_row(str(k), str(v))
     return table
 
@@ -410,9 +412,9 @@ def create_summary_table(evaluations: dict) -> rich.table.Table:
     Returns:
         rich.table.Table: A table summarizing the evaluation results, including the number of low and high priority issues.
     """
-    table = rich.table.Table(title="Evaluation Summary", box=rich.box.SIMPLE)
-    table.add_column("Check", style="bold")
-    table.add_column("Check Verdict")
+    table = rich.table.Table(title="Evaluation Summary", box=rich.box.SQUARE)
+    table.add_column("Evaluation", style="bold")
+    table.add_column("Evaluation Verdict")
     table.add_column("Low Priority Issues", justify="center")
     table.add_column("High Priority Issues", justify="center")
     for check, result in evaluations.items():
@@ -446,13 +448,47 @@ def create_issues_table(check: str, issues: list, verbose: bool) -> rich.table.T
     table.add_column("Rule")
     if verbose:
         table.add_column("Output", overflow="fold")
+    else:
+        table.add_column("Indicator")
     for issue in issues:
         if verbose:
             table.add_row(str(issue.get("priority", "")), str(issue.get("rule", "")), str(issue.get("output", "")))
             table.add_section()
         else:
-            table.add_row(str(issue.get("priority", "")), str(issue.get("rule", "")))
+            table.add_row(str(issue.get("priority", "")), str(issue.get("rule", "")), get_indicator(check, issue))
     return table
+
+
+def get_indicator(check: dict, issue: dict) -> str:
+    """
+    Get a short indicator for the issue to display in the table.
+
+    Args:
+        check (dict): The type of check (e.g., "network", "syscalls", "static", "post_install").
+        issue (dict): The issue dictionary containing priority, rule, and output.
+    Returns:
+        str: A short indicator string for the issue.
+    """
+    if not issue:
+        return None
+    output = issue.get("output", {})
+    if check.lower() == "network":
+        if "ip" in output:
+            return str(output.get("ip", ""))
+        else:
+            return str(output.get("domain", ""))
+    elif check.lower() == "syscalls":
+        if "fd.name" in output:
+            return str(output.get("fd.name", ""))
+        else:
+            return str(output.get("proc.cmdline", ""))
+    elif check.lower() == "static":
+        return str(output.get("file", ""))
+    elif check.lower() == "post_install":
+        if isinstance(output, str):
+            return output.strip()
+        else:
+            return str(output.get("file", ""))
 
 
 def export_results_to_file(profile: profile.Profile, evaluation_result: dict, console: rich.console.Console) -> None:
