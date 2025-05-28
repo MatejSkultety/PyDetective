@@ -13,9 +13,35 @@ import yara
 from . import profile
 
 
+def add_ip(ip: str, ip_addresses: set, profile: profile.Profile) -> None:
+    """
+    Adds an IP address to the set if it is not ignored and is not a private IP.
+
+    Args:
+        ip (str): The IP address to add.
+        ip_addresses (set): The set of IP addresses to which the IP will be added.
+        profile (profile.Profile): The profile instance containing ignored IPs.
+    """
+    if (ip not in profile.ignored_ips and not ipaddress.ip_address(ip).is_private):
+        ip_addresses.add(ip)
+
+
+def add_domain(domain: str, domain_names: set, profile: profile.Profile) -> None:
+    """        
+    Adds a domain name to the set if it is not ignored.
+
+    Args:
+        domain (str): The domain name to add.
+        domain_names (set): The set of domain names to which the domain will be added.
+        profile (profile.Profile): The profile instance containing ignored domains.
+    """
+    if domain not in profile.ignored_domains:
+        domain_names.add(domain)
+
+
 def parse_network_artefacts(profile: profile.Profile) -> tuple[set, set]:
     """
-    Extracts unique IP addresses, domain and names from a pcap file.
+    Extracts unique IP addresses and domain names from a pcap file.
     It uses the pyshark library to read the pcap file and extract relevant information.
 
     Args:
@@ -29,58 +55,45 @@ def parse_network_artefacts(profile: profile.Profile) -> tuple[set, set]:
     logging.debug(f"Parsing network artefacts from {profile.network_output_path}")
     ip_addresses = set()
     domain_names = set()
-
-    cap = pyshark.FileCapture(profile.network_output_path, display_filter='dns or ip')
-    for packet in cap:
-        if 'IP' in packet:
-            src_ip = packet.ip.src
-            dst_ip = packet.ip.dst
-            if (
-                src_ip not in profile.ignored_ips
-                and not ipaddress.ip_address(src_ip).is_private
-            ):
-                ip_addresses.add(src_ip)
-            if (
-                dst_ip not in profile.ignored_ips
-                and not ipaddress.ip_address(dst_ip).is_private
-            ):
-                ip_addresses.add(dst_ip)
-        if 'DNS' in packet:
-            if hasattr(packet.dns, 'qry_name'):
-                domain = packet.dns.qry_name
-                if domain not in profile.ignored_domains:
-                    domain_names.add(domain)
-            if hasattr(packet.dns, 'cname') and packet.dns.cname:
-                cname = packet.dns.cname
-                if cname not in profile.ignored_domains:
-                    domain_names.add(cname)
-            # Check for A and AAAA records (IPv4/IPv6) in DNS responses
-            if hasattr(packet.dns, 'a') and packet.dns.a:
-                if (
-                    packet.dns.a not in profile.ignored_ips
-                    and not ipaddress.ip_address(packet.dns.a).is_private
-                ):
-                    ip_addresses.add(packet.dns.a)
-            if hasattr(packet.dns, 'aaaa') and packet.dns.aaaa:
-                if (
-                    packet.dns.aaaa not in profile.ignored_ips
-                    and not ipaddress.ip_address(packet.dns.aaaa).is_private
-                ):
-                    ip_addresses.add(packet.dns.aaaa)
-    cap.close()
+    with pyshark.FileCapture(profile.network_output_path, display_filter='dns or ip') as cap:
+        for packet in cap:
+            if 'IP' in packet:
+                add_ip(packet.ip.src, ip_addresses, profile)
+                add_ip(packet.ip.dst, ip_addresses, profile)
+            if 'DNS' in packet:
+                if hasattr(packet.dns, 'qry_name'):
+                    add_domain(packet.dns.qry_name, domain_names, profile)
+                if hasattr(packet.dns, 'cname') and packet.dns.cname:
+                    add_domain(packet.dns.cname, domain_names, profile)
+                # Check for A and AAAA records (IPv4/IPv6) in DNS responses
+                if hasattr(packet.dns, 'a') and packet.dns.a:
+                    add_ip(packet.dns.a, ip_addresses, profile)
+                if hasattr(packet.dns, 'aaaa') and packet.dns.aaaa:
+                    add_ip(packet.dns.aaaa, ip_addresses, profile)
     return ip_addresses, domain_names
 
 
 def check_ip_otx(ip: str, profile: profile.Profile) -> dict:
+    """
+    Check if an IP address is associated with any known threats using the OTX API.
+    This function queries the OTX API to retrieve threat intelligence data for the given IP address.
+    OTX API key is required for authentication, which should be set in the profile.
+
+    Args:
+        ip (str): The IP address to check.
+        profile (profile.Profile): The profile instance containing configuration.
+    Returns:
+        dict: A dictionary containing threat intelligence data for the IP address.
+    """
     otx_api_key = profile.otx_api_key
     if not otx_api_key:
         return {}
     url = f"{profile.otx_ipv4_indicators_url}/{ip}"
     headers = {"X-OTX-API-KEY": otx_api_key}
     try:
-        r = requests.get(url, headers=headers, timeout=10)
-        if r.ok:
-            data = r.json()
+        request = requests.get(url, headers=headers, timeout=10)
+        if request.ok:
+            data = request.json()
             pulses = data.get("pulse_info", {}).get("count", 0)
             malicious = pulses > 0
             return {
@@ -88,21 +101,33 @@ def check_ip_otx(ip: str, profile: profile.Profile) -> dict:
                 "otx_pulse_count": pulses,
                 "otx_pulse_names": [p["name"] for p in data.get("pulse_info", {}).get("pulses", [])]
             }
-    except Exception:
-        pass
-    return {}
+    except Exception as e:
+        logging.error(f"OTX IP check failed for {ip}: {e}")
+        return {}
 
 
 def check_domain_otx(domain: str, profile: profile.Profile) -> dict:
+    """
+    Check if a domain is associated with any known threats using the OTX API.
+    This function queries the OTX API to retrieve threat intelligence data for the given domain.
+    OTX API key is required for authentication, which should be set in the profile.
+
+    Args:
+        domain (str): The domain name to check.
+        profile (profile.Profile): The profile instance containing configuration.
+    Returns:
+        dict: A dictionary containing the results of the OTX check, including whether the domain is malicious,
+                the pulse count, and the names of the pulses associated with the domain.
+    """
     otx_api_key = profile.otx_api_key
     if not otx_api_key:
         return {}
     url = f"{profile.otx_domain_indicators_url}/{domain}"
     headers = {"X-OTX-API-KEY": otx_api_key}
     try:
-        r = requests.get(url, headers=headers, timeout=10)
-        if r.ok:
-            data = r.json()
+        request = requests.get(url, headers=headers, timeout=10)
+        if request.ok:
+            data = request.json()
             pulses = data.get("pulse_info", {}).get("count", 0)
             malicious = pulses > 0
             return {
@@ -110,22 +135,33 @@ def check_domain_otx(domain: str, profile: profile.Profile) -> dict:
                 "otx_pulse_count": pulses,
                 "otx_pulse_names": [p["name"] for p in data.get("pulse_info", {}).get("pulses", [])]
             }
-    except Exception:
-        pass
-    return {}
+    except Exception as e:
+        logging.error(f"OTX domain check failed for {domain}: {e}")
+        return {}
 
 
-def enrich_ip(ip: str, profile) -> dict:
+def enrich_ip(ip: str, profile: profile.Profile) -> dict:
+    """
+    Enrich IP address information using RDAP lookup and OTX API for threat intelligence.
+    This function retrieves details such as ASN, country, and network name from RDAP.
+    It also checks the IP against the OTX API to determine if it is associated with any known threats.
+
+    Args:
+        ip (str): The IP address to enrich.
+        profile (profile.Profile): The profile instance containing configuration.
+    Returns:
+        dict: A dictionary containing enriched IP address information.
+    """
     logging.debug(f"Enriching IP address {ip}")
     result = {"ip": ip}
     try:
         obj = ipwhois.IPWhois(ip)
-        res = obj.lookup_rdap()
+        details = obj.lookup_rdap()
         result.update({
-            "asn": res.get("asn"),
-            "asn_description": res.get("asn_description"),
-            "country": res.get("network", {}).get("country"),
-            "network_name": res.get("network", {}).get("name"),
+            "asn": details.get("asn"),
+            "asn_description": details.get("asn_description"),
+            "country": details.get("network", {}).get("country"),
+            "network_name": details.get("network", {}).get("name"),
         })
     except Exception:
         pass
@@ -133,16 +169,28 @@ def enrich_ip(ip: str, profile) -> dict:
     return result
 
 
-def enrich_domain(domain: str, profile) -> dict:
+def enrich_domain(domain: str, profile: profile.Profile) -> dict:
+    """
+    Enrich domain information using WHOIS lookup and OTX API for threat intelligence.
+    This function retrieves WHOIS details such as registrar, creation date, expiration date,
+    and name servers. It also checks the domain against the OTX API to determine if it is
+    associated with any known threats.
+
+    Args:
+        domain (str): The domain name to enrich.
+        profile (profile.Profile): The profile instance containing configuration.
+    Returns:
+        dict: A dictionary containing enriched domain information.
+    """
     logging.debug(f"Enriching domain {domain}")
     result = {"domain": domain}
     try:
-        w = whois.whois(domain)
+        details = whois.whois(domain)
         result.update({
-            "registrar": w.registrar,
-            "creation_date": str(w.creation_date),
-            "expiration_date": str(w.expiration_date),
-            "name_servers": w.name_servers,
+            "registrar": details.registrar,
+            "creation_date": str(details.creation_date),
+            "expiration_date": str(details.expiration_date),
+            "name_servers": details.name_servers,
         })
     except Exception:
         pass
@@ -183,7 +231,7 @@ def analyse_syscalls_artefacts(config_path: str, export_path: str) -> None:
     Returns:
         None
     """
-    command = [f"sudo falco -c {config_path} > {export_path}"]
+    command = f"sudo falco -c {config_path} > {export_path}"
     logging.debug(f"Running Falco with command: {command}")
     process = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     process.wait()
