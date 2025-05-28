@@ -22,7 +22,7 @@ def create_network_command(export_path: str) -> list:
     return command
 
 
-def scan_network(client: docker.client, sandbox: docker.models.containers.Container, export_path: str):
+def scan_network(client: docker.client, sandbox: docker.models.containers.Container, export_path: str) -> docker.models.containers.Container:
     """
     Run a Docker container for tcpdump with the specified parameters.
 
@@ -30,7 +30,6 @@ def scan_network(client: docker.client, sandbox: docker.models.containers.Contai
         client (docker.client): The Docker client instance.
         sandbox (docker.models.containers.Container): The sandbox container instance.
         export_path (str): The path to the file where the tcpdump output will be saved.
-        ignored_hosts (str, optional): A comma-separated list of IP addresses to ignore. Defaults to None.
 
     Returns:
         docker.models.containers.Container: The created tcpdump container.
@@ -79,12 +78,10 @@ def create_syscalls_command(sandbox: docker.models.containers.Container, export_
         filter_string = f"container.name={sandbox.name}"
     else:
         filter_string = f"container.name={sandbox.name}" + " and " + " and ".join(filters)
-
     output_format = "%proc.name %proc.cmdline %proc.args %evt.num %evt.dir %evt.type %evt.info %evt.arg.flags %fd.name"
     command = f"sudo sysdig -j -w {export_path} -pc \"{filter_string}\" -p'{output_format}'"
     logging.debug(f"Sysdig command: {command}")
     return command
-# sudo sysdig -pc "container.name=zealous_meninsky and not (fd.name contains '/lib/x86_64')" -p'%proc.name %proc.cmdline %proc.args %evt.type %evt.info %evt.arg.flags %fd.name'
 
 
 def scan_syscalls(sandbox: docker.models.containers.Container, export_path: str, filters: list[str] = None) -> subprocess.Popen:
