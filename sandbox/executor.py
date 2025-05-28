@@ -36,7 +36,8 @@ def install_archives(archives_path: str) -> None:
 
 def scan_sandbox() -> None:
     """
-    Scan the entire sandbox OS after package installation.
+    Scan the entire sandbox OS after package installation using ClamAV.
+    This function scans common directories for malware and saves the output to a file.
 
     Args:
         None
@@ -45,7 +46,8 @@ def scan_sandbox() -> None:
         None
     """
     print(f"[{time.strftime('%H:%M:%S')}] [INFO] [CONTAINER] Scanning entire sandbox OS ...")
-    command = f"clamscan -i -r /home /tmp /var/tmp /etc /boot /usr/local/bin /lib /lib64 /usr/lib > {DEEPSCAN_OUTPUT}"
+    target_directories = "/home /tmp /var/tmp /etc /boot /usr/local/bin /lib /lib64 /usr/lib"
+    command = f"clamscan -i -r {target_directories} > {DEEPSCAN_OUTPUT}"
     subprocess.Popen(command, shell=True).wait()
 
 
@@ -57,7 +59,6 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('-d', '--deep', action="store_true", help="Scan entire sandbox OS after package installation")
     args = parser.parse_args()
-
     try:
         install_archives(ARCHIVES_PATH)
         if args.deep:

@@ -10,10 +10,11 @@ from . import analysis, containers, evaluation, profile, scanning
 def analyze_package(profile: profile.Profile) -> str:
     """
     Analyze a package by performing network and syscall scans, followed by analysis.
+    This function performs static analysis, builds a sandbox image, creates a sandbox container,
+    starts syscall and network scans, and evaluates the results. It also handles deep analysis if specified.
 
     Args:
         profile (profile.Profile): The profile instance containing configuration.
-        secure (bool): Flag to indicate if secure mode is enabled. Defaults to False.
 
     Returns:
         verdict (str): The verdict of the analysis.

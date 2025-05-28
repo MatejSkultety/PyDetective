@@ -82,7 +82,7 @@ def extract_file_from_container(container: docker.models.containers.Container, s
     Args:
         container (docker.models.containers.Container): The Docker container object.
         source_path (str): The path to the file inside the container.
-        to_pdestination_pathath (str): The destination path on the host filesystem.
+        destination_path (str): The destination folder path on the host filesystem.
 
     Returns:
         None
@@ -91,7 +91,6 @@ def extract_file_from_container(container: docker.models.containers.Container, s
         bits, _ = container.get_archive(source_path)
         tar_stream = io.BytesIO(b''.join(bits))
         with tarfile.open(fileobj=tar_stream, mode="r|") as tar:
-            # containrt.get_archive returns a tar stream, we need to extract it to the specified path
             tar.extractall(path=destination_path)
         logging.error(f"File extracted from {source_path} in container to {destination_path}")
     except docker.errors.APIError as e:
@@ -148,6 +147,8 @@ def get_logs_from_container(sandbox_container: docker.models.containers.Containe
 def download_package(profile: profile.Profile) -> str:
     """
     Downloads a Python package using `pip download`, extracts it, and returns the name of the downloaded package folder.
+    If the package is a local package, it copies the package to the specified directories and extracts it.
+    This function handles both local and remote packages based on the `profile` configuration.
 
     Args:
         profile (profile.Profile): The profile instance containing configuration.
@@ -159,6 +160,7 @@ def download_package(profile: profile.Profile) -> str:
     delete_package(profile.archives_path)
     delete_package(profile.extracted_path)
     if profile.local_package:
+        # If the package is local, copy it to the archives and extracted paths
         logging.info("Processing local package")
         if profile.args.verbose:
             print(f"[{time.strftime('%H:%M:%S')}] [INFO] Processing local package...")
@@ -174,6 +176,7 @@ def download_package(profile: profile.Profile) -> str:
             raise Exception(f"Failed to copy local package: {e}")
         return profile.package_name
     else:
+        # Download the package from PyPI
         logging.info("Downloading package from PyPI")
         if profile.args.verbose:
             print(f"[{time.strftime('%H:%M:%S')}] [INFO] Downloading package from PyPI...")
@@ -211,7 +214,8 @@ def extract_package(archives_path: str, extraction_path: str) -> None:
                 if archive_path and os.path.exists(archive_path):
                     os.remove(archive_path)
                 raise Exception(f"Failed to extract zip package: {e}")
-        else:    
+        else:
+            # Assuming the archive is a tar file (e.g., .tar.gz)
             try:
                 with tarfile.open(archive_path) as tar_ref:
                     tar_ref.extractall(path=extraction_path)
