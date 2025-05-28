@@ -16,22 +16,35 @@ from . import profile
 
 
 class Verdict(enum.Enum):
+    """
+    Enum to represent the verdict of the evaluation.
+    - SAFE: No issues found, package is safe.
+    - DANGEROUS: Some low priority issues found, package may be suspicious.
+    - MALICIOUS: High priority issues found, package is considered malicious.
+    """
     SAFE = "SAFE"
     DANGEROUS = "SUSPICIOUS"
     MALICIOUS = "MALICIOUS"
 
 
 def evaluate_network_results(profile: profile.Profile) -> dict:
+    """
+    Evaluate network results from the profile's network result path in profile.
+    Verdict is determined based on the number of high and low priority issues found.
+
+    Args:
+        profile (profile.Profile): The profile containing paths to the network results and evaluation settings.
+    Returns:
+        dict: A dictionary containing the evaluation results, including the number of issues and verdict.
+    """
     result = {
         "num_low_priority": 0,
         "num_high_priority": 0,
         "verdict": Verdict.SAFE.value,
         "issues": []
     }
-
     with open(profile.network_result_path, "r") as file:
         data = json.load(file)
-
         # Evaluate IP addresses
         for ip_info in data.get("ip_addresses", []):
             try:
@@ -60,7 +73,6 @@ def evaluate_network_results(profile: profile.Profile) -> dict:
                 }
                 result["issues"].append(issue)
                 result["num_low_priority"] += 1
-
         # Evaluate domain names
         for domain_info in data.get("domain_names", []):
             try:
@@ -88,7 +100,6 @@ def evaluate_network_results(profile: profile.Profile) -> dict:
                 }
                 result["issues"].append(issue)
                 result["num_low_priority"] += 1
-
     if result["num_high_priority"] > profile.MAX_TOLERATED_HIGH_PRIORITY_NETWORK:
         result["verdict"] = Verdict.MALICIOUS.value
     elif result["num_low_priority"] > profile.MAX_TOLERATED_LOW_PRIORITY_NETWORK:
@@ -99,13 +110,21 @@ def evaluate_network_results(profile: profile.Profile) -> dict:
 
 
 def evaluate_syscalls_results(profile: profile.Profile) -> dict:
+    """
+    Evaluate syscall results from the profile's syscalls result path in profile.
+    Verdict is determined based on the number of high and low priority syscalls found.
+
+    Args:
+        profile (profile.Profile): The profile containing paths to the syscalls results and evaluation settings.
+    Returns:
+        dict: A dictionary containing the evaluation results, including the number of issues and verdict.
+    """
     result = {
         "num_low_priority": 0,
         "num_high_priority": 0,
         "verdict": Verdict.SAFE.value,
         "issues": []
     }
-
     with open(profile.syscalls_result_path, "r") as file:
         for line in file:
             try:
@@ -135,20 +154,26 @@ def evaluate_syscalls_results(profile: profile.Profile) -> dict:
 
 
 def evaluate_static_results(profile: profile.Profile) -> dict:
+    """
+    Evaluate static analysis results from the profile's static result path in profile.
+    Verdict is determined based on the number of high and low priority issues found.
+
+    Args:
+        profile (profile.Profile): The profile containing paths to the static results and evaluation settings.
+    Returns:
+        dict: A dictionary containing the evaluation results, including the number of issues and verdict.
+    """
     result = {
         "num_low_priority": 0,
         "num_high_priority": 0,
         "verdict": Verdict.SAFE.value,
         "issues": []
     }
-
     with open(profile.static_result_path, "r") as file:
         try:
-            data = json.load(file)  # Load the JSON array from the file
+            data = json.load(file)
             for entry in data:
-                file_path = entry.get("file", "")
                 matches = entry.get("matches", [])
-
                 for match in matches:
                     if match.get("rule"):
                         meta, = match.get("meta", {}),
@@ -163,7 +188,6 @@ def evaluate_static_results(profile: profile.Profile) -> dict:
                         }
                         result["issues"].append(formatted_event)
                         result["num_high_priority"] += 1
-
         except json.JSONDecodeError:
             print("Invalid JSON file encountered, skipping.")
     if result["num_high_priority"] > profile.MAX_TOLERATED_HIGH_PRIORITY_STATIC:
@@ -176,6 +200,15 @@ def evaluate_static_results(profile: profile.Profile) -> dict:
 
 
 def evaluate_post_install_results(profile: profile.Profile) -> dict:
+    """
+    Evaluate post-install results from the profile's post-install result path in profile.
+    Verdict is determined based only on the number of high priority issues found.
+
+    Args:
+        profile (profile.Profile): The profile containing paths to the post-install results and evaluation settings.
+    Returns:
+        dict: A dictionary containing the evaluation results, including the number of issues and verdict.
+    """
     result = {
         "num_low_priority": 0,
         "num_high_priority": 0,
@@ -185,6 +218,7 @@ def evaluate_post_install_results(profile: profile.Profile) -> dict:
     try:
         with open(profile.post_install_result_path, "r") as file:
             for line in file:
+                # clamscan output lines consist of infected files and then a summary section
                 if "SCAN SUMMARY" in line:
                     break
                 if line.strip():
@@ -200,20 +234,30 @@ def evaluate_post_install_results(profile: profile.Profile) -> dict:
         result["verdict"] = Verdict.MALICIOUS.value
     else:
         result["verdict"] = Verdict.SAFE.value
-
     return result
 
 
 def evaluate_package(profile: profile.Profile, static_result: dict = None) -> dict:
-    # Call individual evaluation functions
+    """
+    Evaluate a package based on its profile, including network, syscalls, static analysis, and post-install results.
+    This function aggregates results from various checks and determines the final verdict based on the issues found.
+    It also retrieves package metadata, displays and stores the evaluation result in a MySQL database if configured.
+
+    Args:
+        profile (profile.Profile): The profile containing paths to the results and evaluation settings.
+        static_result (dict, optional): Pre-created static analysis results. If None, it will be created.
+    Returns:
+        dict: A dictionary containing the evaluation results, including metadata, timestamp, final verdict, and detailed evaluations.
+    """
+    # Main evaluation logic
     network_result = evaluate_network_results(profile)
     syscalls_result = evaluate_syscalls_results(profile)
+    # static_result is created before installation of the package, so it can be passed as an argument
     if static_result is None:
         static_result = evaluate_static_results(profile)
     post_install_result = evaluate_post_install_results(profile)
 
     print(f"[{time.strftime('%H:%M:%S')}] [INFO] Evaluating package '{profile.package_name}'")
-    # Aggregate results
     verdicts = set()
     verdicts.add(network_result["verdict"])
     verdicts.add(syscalls_result["verdict"])
@@ -225,6 +269,7 @@ def evaluate_package(profile: profile.Profile, static_result: dict = None) -> di
         final_verdict = Verdict.DANGEROUS.value
     else:
         final_verdict = Verdict.SAFE.value
+
     evaluation_result = {
         "metadata": get_package_metadata(profile),
         "timestamp": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
@@ -244,6 +289,17 @@ def evaluate_package(profile: profile.Profile, static_result: dict = None) -> di
 
 
 def get_package_metadata(profile: profile.Profile) -> dict:
+    """
+    Retrieve metadata for the package specified in the profile.
+    If the package is a local file, it reads metadata from the file.
+    If the package is not local, it retrieves metadata from PyPI using a curl command.
+
+    Args:
+        profile (profile.Profile): The profile containing the package name and local package flag.
+    Returns:
+        dict: A dictionary containing package metadata such as name, version, author, author email, home page, and package URL.
+    """
+    # Downloaded package
     if not profile.local_package:
         metadata_retrieval_command = f"curl https://pypi.org/pypi/{profile.package_name}/json"
         try:
@@ -264,6 +320,7 @@ def get_package_metadata(profile: profile.Profile) -> dict:
         except Exception as e:
             logging.error(f"Error retrieving package metadata: {e}")
             return {}
+    # Local package
     else:
         try:
             if profile.package_name.endswith(".whl"):
@@ -362,6 +419,17 @@ def print_evaluation_result(profile: profile.Profile, evaluation_result: dict) -
 
 
 def export_results_to_file(profile: profile.Profile, evaluation_result: dict, console: rich.console.Console) -> None:
+    """
+    Export the evaluation results to a file in the specified format (JSON, HTML, or PDF).
+    If the format is not supported, it defaults to JSON.
+
+    Args:
+        profile (profile.Profile): The profile containing the export path and format.
+        evaluation_result (dict): The evaluation result dictionary containing metadata and evaluations.
+        console (rich.console.Console): The rich console object for exporting HTML content.
+    Returns:
+        None
+    """
     export_path = profile.args.write
     export_format = export_path.split('.')[-1].lower()
     if export_format == 'json':
@@ -386,6 +454,15 @@ def export_results_to_file(profile: profile.Profile, evaluation_result: dict, co
 
 
 def store_evaluation_result(profile: profile.Profile, evaluation_result: dict) -> None:
+    """
+    Store the evaluation result in a MySQL database. Saves only unique results based on a hash of the evaluation.
+
+    Args:
+        profile (profile.Profile): The profile containing database connection and settings.
+        evaluation_result (dict): The evaluation result dictionary containing metadata and evaluations to be stored.
+    Returns:
+        None
+    """
     verdict = evaluation_result.get("final_verdict", "")
     version = evaluation_result.get("metadata", {}).get("version", "")
     hash = get_result_hash(evaluation_result)
@@ -430,6 +507,16 @@ def get_result_hash(evaluation_result: dict) -> str:
 
 
 def read_db_results(profile: profile.Profile) -> None:
+    """
+    Read and display results from the MySQL database based on the profile's database settings.
+    If the database argument is set to "ALL", it retrieves all results from the specified table.
+    If a specific package name is provided, it retrieves results for that package only.
+    
+    Args:
+        profile (profile.Profile): The profile containing database connection and arguments.
+    Returns:
+        None
+    """
     try:
         cursor = profile.database_connection.cursor()
         if profile.args.database.lower() == "all":
