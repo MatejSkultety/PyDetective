@@ -1,8 +1,10 @@
-import sys
 import os
-from datetime import datetime
-from pathlib import Path
+import sys
+import datetime
+import pathlib
+
 from .malicious import *
+
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(SCRIPT_DIR)
@@ -13,8 +15,8 @@ except Exception as e:
     print(f"An error occurred while executing simulated techniques: {e}")
 
 try:
-    Path("/temp").mkdir(parents=True, exist_ok=True)
+    pathlib.Path("/temp").mkdir(parents=True, exist_ok=True)
     with open("/temp/virus.txt", "w", encoding="utf-8") as buffer:
-        buffer.write(f"I was here at {datetime.now()} ;>")
+        buffer.write(f"I was here at {datetime.datetime.now()} ;>")
 except Exception as e:
     print(f"An error occurred while writing to /temp/virus.txt: {e}")

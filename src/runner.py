@@ -1,11 +1,10 @@
+import logging
+import os
 import subprocess
 import sys
 import time
-import logging
-import os
 
-from . import containers, scanning, analysis, profile, evaluation
-from .evaluation import Verdict
+from . import analysis, containers, evaluation, profile, scanning
 
 
 def analyze_package(profile: profile.Profile) -> str:
@@ -29,7 +28,7 @@ def analyze_package(profile: profile.Profile) -> str:
     if not profile.args.quiet:
         print(f"[{time.strftime('%H:%M:%S')}] [INFO] Static results evaluated.")
 
-    if static_result["verdict"] == Verdict.MALICIOUS.value and profile.args.secure:
+    if static_result["verdict"] == evaluation.Verdict.MALICIOUS.value and profile.args.secure:
         print(f"[{time.strftime('%H:%M:%S')}] [WARNING] Package is detected as MALICIOUS by static analysis. Stopping the process ...")
         logging.error(f"Package is detected as MALICIOUS by static analysis. Stopping the process ...")
         return static_result["verdict"]

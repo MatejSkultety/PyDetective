@@ -5,15 +5,23 @@ import os
 import platform
 import sys
 import time
-import yaml
+
 import docker
 import mysql.connector
+import yaml
 
-from src.profile import Profile
-from src import runner, containers, evaluation, analysis
+from src import analysis, containers, evaluation, profile, runner
 
 
-def banner():
+def banner() -> None:
+    """
+    Prints the banner of the application created with ASCII art.
+
+    Args:
+        None
+    Returns:
+        None
+    """
     print(r"""
    ___          ___     _            _   _           
   / _ \_   _   /   \___| |_ ___  ___| |_(_)_   _____ 
@@ -234,7 +242,7 @@ def init_logger():
     logger = logging.getLogger('__name__')
 
 
-def init_database(profile: Profile):
+def init_database(profile: profile.Profile):
 
     try:
         connection = mysql.connector.connect(
@@ -264,7 +272,7 @@ def init_database(profile: Profile):
         return connection
 
 
-def init_pydetective(args: argparse.Namespace) -> Profile:
+def init_pydetective(args: argparse.Namespace) -> profile.Profile:
 
     init_logger()
     logging.info("Initializing PyDetective")
@@ -276,7 +284,7 @@ def init_pydetective(args: argparse.Namespace) -> Profile:
         if not args.quiet:
             print(f"[{time.strftime('%H:%M:%S')}] [INFO] Loading configuration file '{args.config}'...")
         config = load_config(args.config)
-        profile = Profile(config, args)
+        profile = profile.Profile(config, args)
 
         profile.analysis_timestamp = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         profile.terminal_size = os.get_terminal_size()

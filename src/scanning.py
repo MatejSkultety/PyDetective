@@ -1,6 +1,7 @@
-import docker
-import subprocess
 import logging
+import subprocess
+
+import docker
 
 from . import containers
 

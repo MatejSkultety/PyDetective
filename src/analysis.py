@@ -1,14 +1,14 @@
-import pyshark
 import json
-import subprocess
-import yara
-import os
-import requests
-from datetime import datetime
-import ipwhois
 import logging
-import whois
+import os
+import subprocess
+
 import ipaddress
+import ipwhois
+import pyshark
+import requests
+import whois
+import yara
 
 from . import profile
 
@@ -229,7 +229,6 @@ def scan_file(file_path: str, rules: dict, results: list) -> dict:
     """
     result = {
         'file': file_path,
-        'timestamp': datetime.now().isoformat(),
         'matches': []
     }
     try:

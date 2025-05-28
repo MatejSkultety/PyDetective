@@ -1,6 +1,6 @@
 import logging
-import time
 import sys
+import time
 
 
 class Profile:
@@ -149,4 +149,3 @@ class Profile:
 
         self.terminal_size = None
         self.analysis_timestamp = None
-

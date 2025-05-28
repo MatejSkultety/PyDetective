@@ -1,23 +1,21 @@
-import json
-from datetime import datetime
-import time
-import toml
-import logging
-from enum import Enum
-from rich.console import Console
-from rich.table import Table
-from rich.panel import Panel
-from rich import box
-import subprocess
-import pkginfo
-import os
-import weasyprint
+import datetime
+import enum
 import hashlib
+import json
+import logging
+import os
+import subprocess
+import time
+
+import pkginfo
+import rich
+import toml
+import weasyprint
 
 from . import profile
 
 
-class Verdict(Enum):
+class Verdict(enum.Enum):
     SAFE = "SAFE"
     DANGEROUS = "SUSPICIOUS"
     MALICIOUS = "MALICIOUS"
@@ -229,7 +227,7 @@ def evaluate_package(profile: profile.Profile, static_result: dict = None) -> di
         final_verdict = Verdict.SAFE.value
     evaluation_result = {
         "metadata": get_package_metadata(profile),
-        "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        "timestamp": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
         "final_verdict": final_verdict,
         "evaluations": {
             "network": network_result,
@@ -295,7 +293,7 @@ def get_package_metadata(profile: profile.Profile) -> dict:
 
 def print_evaluation_result(profile: profile.Profile, evaluation_result: dict) -> None:
     print('.' * profile.terminal_size.columns)
-    console = Console(record=True)
+    console = rich.console.Console(record=True)
     metadata = evaluation_result.get("metadata", {})
     timestamp = evaluation_result.get("timestamp", "")
     final_verdict = evaluation_result.get("final_verdict", "")
@@ -303,10 +301,10 @@ def print_evaluation_result(profile: profile.Profile, evaluation_result: dict) -
 
     # Header panel and metadata table (skip if quiet)
     header = f"[bold]PyDetective Analysis Result[/bold]\n[dim]Timestamp:[/dim] {timestamp}\n[dim]Final Verdict:[/dim] [bold]{final_verdict}[/bold]"
-    console.print(Panel(header, expand=False))
+    console.print(rich.panel.Panel(header, expand=False))
 
     if metadata and not profile.args.quiet:
-        meta_table = Table(title="Package Metadata", box=box.SIMPLE)
+        meta_table = rich.table.Table(title="Package Metadata", box=rich.box.SIMPLE)
         meta_table.add_column("Key", style="bold")
         meta_table.add_column("Value")
         for k, v in metadata.items():
@@ -314,7 +312,7 @@ def print_evaluation_result(profile: profile.Profile, evaluation_result: dict) -
         console.print(meta_table)
 
     # Evaluations summary table (always shown)
-    summary_table = Table(title="Evaluation Summary", box=box.SIMPLE)
+    summary_table = rich.table.Table(title="Evaluation Summary", box=rich.box.SIMPLE)
     summary_table.add_column("Check", style="bold")
     summary_table.add_column("Check Verdict")
     summary_table.add_column("Low Priority Issues", justify="center")
@@ -340,7 +338,7 @@ def print_evaluation_result(profile: profile.Profile, evaluation_result: dict) -
         for check, result in evaluations.items():
             issues = result.get("issues", [])
             if issues:
-                table = Table(title=check_titles.get(check.lower(), "Other Issues Found"), box=box.MINIMAL)
+                table = rich.table.Table(title=check_titles.get(check.lower(), "Other Issues Found"), box=rich.box.MINIMAL)
                 table.add_column("Priority", style="bold")
                 table.add_column("Rule")
                 if profile.args.verbose:
@@ -363,8 +361,7 @@ def print_evaluation_result(profile: profile.Profile, evaluation_result: dict) -
         export_results_to_file(profile, evaluation_result, console)
 
 
-def export_results_to_file(profile: profile.Profile, evaluation_result: dict, console: Console) -> None:
-    
+def export_results_to_file(profile: profile.Profile, evaluation_result: dict, console: rich.console.Console) -> None:
     export_path = profile.args.write
     export_format = export_path.split('.')[-1].lower()
     if export_format == 'json':
@@ -438,8 +435,8 @@ def read_db_results(profile: profile.Profile) -> None:
         if profile.args.database.lower() == "all":
             cursor.execute(f"SELECT package_name, version, verdict, timestamp FROM {profile.db_table}")
             rows = cursor.fetchall()
-            console = Console()
-            table = Table(title="PyDetective Results History")
+            console = rich.console.Console()
+            table = rich.table.Table(title="PyDetective Results History")
             table.add_column("Package Name", style="bold")
             table.add_column("Version")
             table.add_column("Verdict")

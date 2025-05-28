@@ -1,7 +1,7 @@
+import argparse
 import os
 import subprocess
 import time
-import argparse
 
 
 ARCHIVES_PATH = "/app/archives"

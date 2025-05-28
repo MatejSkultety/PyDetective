@@ -6,6 +6,7 @@ pyshark
 PyYAML
 requests
 rich
+setuptools
 toml
 weasyprint
 whois

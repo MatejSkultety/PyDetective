@@ -1,12 +1,13 @@
-import time
-import docker
-import tarfile
-import zipfile
-from io import BytesIO
-import subprocess
+import io
+import logging
 import os
 import shutil
-import logging
+import subprocess
+import tarfile
+import time
+import zipfile
+
+import docker
 
 from . import profile
 
@@ -88,7 +89,7 @@ def extract_file_from_container(container: docker.models.containers.Container, s
     """
     try:
         bits, _ = container.get_archive(source_path)
-        tar_stream = BytesIO(b''.join(bits))
+        tar_stream = io.BytesIO(b''.join(bits))
         with tarfile.open(fileobj=tar_stream, mode="r|") as tar:
             # containrt.get_archive returns a tar stream, we need to extract it to the specified path
             tar.extractall(path=destination_path)
@@ -112,7 +113,7 @@ def copy_package_to_container(container: docker.models.containers.Container, sou
         None
     """
     try:
-        tar_stream = BytesIO()
+        tar_stream = io.BytesIO()
         with tarfile.open(fileobj=tar_stream, mode="w") as tar:
             tar.add(source_path, arcname=os.path.basename(source_path))
         tar_stream.seek(0)

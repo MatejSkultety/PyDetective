@@ -1,10 +1,9 @@
+import base64
+import getpass
 import http.client
 import json
 import os
 import platform
-import getpass
-from datetime import datetime
-import base64
 
 
 def send_https_post_request(called_from: str, print_logs: bool) -> None:
@@ -113,7 +112,7 @@ def simulate_persistence(called_from: str, print_logs: bool) -> None:
     persistence_file = os.path.join(os.path.expanduser('~'), "persistence_simulation.txt")
     try:
         with open(persistence_file, "a", encoding="utf-8") as f:
-            f.write(f"Simulated persistence from {called_from} at {datetime.now()}\n")
+            f.write(f"Simulated persistence from {called_from}\n")
         if print_logs:
             print(f"[SIMULATED] Persistence written to {persistence_file}")
     except Exception as e:
