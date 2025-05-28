@@ -7,6 +7,13 @@ containers:
   image_name: pydetective_sandbox_container
   image_tag: pydetective_sandbox_container:latest
 
+database:
+  host: localhost
+  user: pydetective_user
+  password: pydetective_password
+  database_name: pydetective_db
+  table: pydetective_results
+
 file_paths:
   installation_script: setup.sh
   rules_folder_path: rules
@@ -17,7 +24,7 @@ file_paths:
   static_result_path: out/static_result.json
   syscalls_result_path: out/syscalls_result.json
   network_result_path: out/network_result.json
-  post_install_result_path: out/post_install_result.json
+  post_install_result_path: out/deepscan_result.txt
   network_output_path: out/tcpdump_output.pcap
   syscalls_output_path: out/sysdig_output.scap
   evaluation_output_path: out/evaluation_result.json
@@ -33,12 +40,17 @@ file_paths:
   pypi_projects_dependency_path: pyproject.toml
   config_folder_path: config
   src_folder_path: src
-  deepscan_output_path: /app/deepscan_output.txt
+  deepscan_output_path: /app/deepscan_result.txt
 
 ignored_ips:
   - 151.101.0.223
   - 151.101.192.223
   - 151.101.128.223
+  - 151.101.64.223
+  - 172.17.0.2
+  - 2a04:4e42::223
+  - 192.168.0.1
+  - 2a04:4e42:200::223
 
 ignored_domains:
   - pypi.org
@@ -47,10 +59,13 @@ ignored_domains:
 
 ignored_syscalls:
   - not (proc.cmdline contains 'clamscan -i -r')
-  - not (proc.cmdline contains 'pip install --break-system-packages /app/archives/package')
+  - not (proc.cmdline contains 'pip install --break-system-packages /app/archives/')
 
 thresholds:
-  MAX_FREQUENCY: 10 # percentage
-  MAX_DURATION: 14000 # seconds
-  MAX_HTTP_SIZE: 50000 # bytes
-  MAX_SUBDOMAIN_LENGTH: 30 # chars
+  MAX_TOLERATED_LOW_PRIORITY_NETWORK: 1
+  MAX_TOLERATED_HIGH_PRIORITY_NETWORK: 0
+  MAX_TOLERATED_LOW_PRIORITY_SYSCALLS: 1
+  MAX_TOLERATED_HIGH_PRIORITY_SYSCALLS: 0
+  MAX_TOLERATED_LOW_PRIORITY_STATIC: 1
+  MAX_TOLERATED_HIGH_PRIORITY_STATIC: 0
+  MAX_TOLERATED_HIGH_PRIORITY_POST_INSTALL: 0

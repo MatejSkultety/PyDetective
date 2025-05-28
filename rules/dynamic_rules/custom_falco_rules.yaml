@@ -9,7 +9,7 @@
 # Detects execution of suspicious network utilities or exfiltration tools
 - rule: Suspicious Network Utility Execution
   desc: Detects execution of curl, wget, nc, ncat, or python scripts that may exfiltrate data
-  condition: (proc.name in ("curl", "wget", "nc", "ncat") or (proc.name = "python" and (proc.cmdline contains "requests" or proc.cmdline contains "http.client")))
+  condition: (evt.type = execve and (proc.name in ("curl", "wget", "nc", "ncat") or (proc.name = "python" and (proc.cmdline contains "requests" or proc.cmdline contains "http.client"))))
   output: "Suspicious network utility execution (user=%user.name command=%proc.cmdline)"
   priority: WARNING
   tags: [network, exfiltration, process]
@@ -25,15 +25,7 @@
 # Detects execution of base64, python, or shell commands that may indicate obfuscation or code injection
 - rule: Suspicious Obfuscated Code Execution
   desc: Detects execution of base64, python, or shell commands with suspicious arguments
-  condition: (proc.name in ("base64", "python", "python3", "sh", "bash") and (proc.cmdline contains "b64decode" or proc.cmdline contains "exec(" or proc.cmdline contains "marshal.loads" or proc.cmdline contains "fromhex"))
+  condition: (evt.type = execve and (proc.name in ("base64", "python", "python3", "sh", "bash") and (proc.cmdline contains "b64decode" or proc.cmdline contains "exec(" or proc.cmdline contains "marshal.loads" or proc.cmdline contains "fromhex")))
   output: "Suspicious obfuscated code execution (user=%user.name command=%proc.cmdline)"
   priority: WARNING
   tags: [obfuscation, code_exec, process]
-
-# Detects DNS exfiltration attempts via suspicious DNS queries
-- rule: Suspicious DNS Query
-  desc: Detects DNS queries with suspicious data-leak or exfiltration patterns
-  condition: (evt.type = "dns_query" and (fd.name contains "data-leak-" or fd.name contains "exfil"))
-  output: "Suspicious DNS query (user=%user.name command=%proc.cmdline query=%fd.name)"
-  priority: WARNING
-  tags: [network, dns, exfiltration]

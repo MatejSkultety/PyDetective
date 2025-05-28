@@ -12,6 +12,7 @@ import subprocess
 import pkginfo
 import os
 import weasyprint
+import hashlib
 
 from . import profile
 
@@ -22,15 +23,15 @@ class Verdict(Enum):
     MALICIOUS = "MALICIOUS"
 
 
-def evaluate_network_results(source_path: str) -> dict:
+def evaluate_network_results(profile: profile.Profile) -> dict:
     result = {
-        "warnings": 0,
-        "errors": 0,
+        "num_low_priority": 0,
+        "num_high_priority": 0,
         "verdict": Verdict.SAFE.value,
         "issues": []
     }
 
-    with open(source_path, "r") as file:
+    with open(profile.network_result_path, "r") as file:
         data = json.load(file)
 
         # Evaluate IP addresses
@@ -39,92 +40,85 @@ def evaluate_network_results(source_path: str) -> dict:
                 if "otx_malicious" in ip_info:
                     if ip_info.get("otx_malicious"):
                         issue = {
-                            "priority": "ERROR",
+                            "priority": "HIGH",
                             "rule": f"Dangerous IP accessed: {ip_info.get('ip', '')} - {ip_info.get('asn_description', '')}",
                             "output": ip_info
                         }
                         result["issues"].append(issue)
-                        result["errors"] += 1
-                    else:
-                        issue = {
-                            "priority": "INFO",
-                            "rule": f"IP accessed: {ip_info.get('ip', '')} - {ip_info.get('asn_description', '')}",
-                            "output": ip_info
-                        }
-                        result["issues"].append(issue)
+                        result["num_high_priority"] += 1
                 else:
                     issue = {
-                        "priority": "WARNING",
+                        "priority": "LOW",
                         "rule": f"IP without OTX details accessed {ip_info.get('ip', '')}",
                         "output": ip_info
                     }
                     result["issues"].append(issue)
-                    result["warnings"] += 1
+                    result["num_low_priority"] += 1
             except Exception:
                 issue = {
-                    "priority": "WARNING",
+                    "priority": "LOW",
                     "rule": f"IP {ip_info.get('ip', 'unknown')} - Could not evaluate",
                     "output": ip_info
                 }
                 result["issues"].append(issue)
-                result["warnings"] += 1
+                result["num_low_priority"] += 1
 
         # Evaluate domain names
         for domain_info in data.get("domain_names", []):
             try:
                 if "otx_malicious" in domain_info and domain_info.get("otx_malicious"):
                     issue = {
-                        "priority": "ERROR",
+                        "priority": "HIGH",
                         "rule": f"Dangerous domain accessed: {domain_info.get('domain', '')}",
                         "output": domain_info
                     }
                     result["issues"].append(issue)
-                    result["errors"] += 1  
+                    result["num_high_priority"] += 1  
                 else:   
                     issue = {
-                        "priority": "WARNING",
+                        "priority": "LOW",
                         "rule": f"Unexpected domain accessed: {domain_info.get('domain', '')}",
                         "output": domain_info
                     }
                     result["issues"].append(issue)
-                    result["warnings"] += 1
+                    result["num_low_priority"] += 1
             except Exception:
                 issue = {
-                    "priority": "WARNING",
+                    "priority": "LOW",
                     "rule": f"Domain {domain_info.get('domain', 'unknown')} - Could not evaluate",
                     "output": domain_info
                 }
                 result["issues"].append(issue)
-                result["warnings"] += 1
+                result["num_low_priority"] += 1
 
-    if result["errors"] > 0:
+    if result["num_high_priority"] > profile.MAX_TOLERATED_HIGH_PRIORITY_NETWORK:
         result["verdict"] = Verdict.MALICIOUS.value
-    elif result["warnings"] > 0:
+    elif result["num_low_priority"] > profile.MAX_TOLERATED_LOW_PRIORITY_NETWORK:
         result["verdict"] = Verdict.DANGEROUS.value
     else:
         result["verdict"] = Verdict.SAFE.value
     return result
 
 
-def evaluate_syscalls_results(source_path: str) -> dict:
+def evaluate_syscalls_results(profile: profile.Profile) -> dict:
     result = {
-        "warnings": 0,
-        "errors": 0,
+        "num_low_priority": 0,
+        "num_high_priority": 0,
         "verdict": Verdict.SAFE.value,
         "issues": []
     }
 
-    with open(source_path, "r") as file:
+    with open(profile.syscalls_result_path, "r") as file:
         for line in file:
             try:
                 event = json.loads(line.strip())
                 falco_priority = event.get("priority", "").upper()
                 if falco_priority in ["NOTICE", "INFO", "DEBUG"]:
-                    result["warnings"] += 1
-                    priority = "WARNING"
+                    result["num_low_priority"] += 1
+                    priority = "LOW"
                 else:
-                    result["errors"] += 1
-                    priority = "ERROR"
+                    result["num_high_priority"] += 1
+                    priority = "HIGH"
                 formatted_event = {
                     "priority": priority,
                     "rule": event.get("rule", ""),
@@ -133,24 +127,24 @@ def evaluate_syscalls_results(source_path: str) -> dict:
                 result["issues"].append(formatted_event)
             except json.JSONDecodeError:
                 continue
-    if result["errors"] > 0:
+    if result["num_high_priority"] > profile.MAX_TOLERATED_HIGH_PRIORITY_SYSCALLS:
         result["verdict"] = Verdict.MALICIOUS.value
-    elif result["warnings"] > 0:
+    elif result["num_low_priority"] > profile.MAX_TOLERATED_LOW_PRIORITY_SYSCALLS:
         result["verdict"] = Verdict.DANGEROUS.value
     else:
         result["verdict"] = Verdict.SAFE.value
     return result
 
 
-def evaluate_static_results(source_path: str) -> dict:
+def evaluate_static_results(profile: profile.Profile) -> dict:
     result = {
-        "warnings": 0,
-        "errors": 0,
+        "num_low_priority": 0,
+        "num_high_priority": 0,
         "verdict": Verdict.SAFE.value,
         "issues": []
     }
 
-    with open(source_path, "r") as file:
+    with open(profile.static_result_path, "r") as file:
         try:
             data = json.load(file)  # Load the JSON array from the file
             for entry in data:
@@ -159,51 +153,52 @@ def evaluate_static_results(source_path: str) -> dict:
 
                 for match in matches:
                     if match.get("rule"):
+                        meta, = match.get("meta", {}),
                         formatted_event = {
-                            "priority": "ERROR",
+                            "priority": meta.get("priority", "HIGH").upper(),
                             "rule": str(match.get("rule", "")),
                             "output": {
                                 "file": entry.get("file", ""),
-                                "meta": match.get("meta", {}), 
+                                "meta": meta, 
                                 "strings": match.get("strings", [])
                             }
                         }
                         result["issues"].append(formatted_event)
-                        result["errors"] += 1
+                        result["num_high_priority"] += 1
 
         except json.JSONDecodeError:
             print("Invalid JSON file encountered, skipping.")
-    if result["errors"] > 0:
+    if result["num_high_priority"] > profile.MAX_TOLERATED_HIGH_PRIORITY_STATIC:
         result["verdict"] = Verdict.MALICIOUS.value
-    elif result["warnings"] > 0:
+    elif result["num_low_priority"] > profile.MAX_TOLERATED_LOW_PRIORITY_STATIC:
         result["verdict"] = Verdict.DANGEROUS.value
     else:
         result["verdict"] = Verdict.SAFE.value
     return result
 
 
-def evaluate_post_install_results(source_path: str) -> dict:
+def evaluate_post_install_results(profile: profile.Profile) -> dict:
     result = {
-        "warnings": 0,
-        "errors": 0,
+        "num_low_priority": 0,
+        "num_high_priority": 0,
         "verdict": Verdict.SAFE.value,
         "issues": []
     }
     try:
-        with open(source_path, "r") as file:
+        with open(profile.post_install_result_path, "r") as file:
             for line in file:
                 if "SCAN SUMMARY" in line:
                     break
                 if line.strip():
                     result["issues"].append({
-                        "priority": "ERROR",
+                        "priority": "HIGH",
                         "rule": "Detected issue",
                         "output": line.strip()
                     })
-                    result["errors"] += 1
+                    result["num_high_priority"] += 1
     except FileNotFoundError:
-        logging.error(f"Post-install result file not found: {source_path}")
-    if result["errors"] > 0:
+        logging.error(f"Post-install result file not found: {profile.post_install_result_path}")
+    if result["num_high_priority"] > profile.MAX_TOLERATED_HIGH_PRIORITY_POST_INSTALL:
         result["verdict"] = Verdict.MALICIOUS.value
     else:
         result["verdict"] = Verdict.SAFE.value
@@ -213,11 +208,11 @@ def evaluate_post_install_results(source_path: str) -> dict:
 
 def evaluate_package(profile: profile.Profile, static_result: dict = None) -> dict:
     # Call individual evaluation functions
-    network_result = evaluate_network_results(profile.network_result_path)
-    syscalls_result = evaluate_syscalls_results(profile.syscalls_result_path)
+    network_result = evaluate_network_results(profile)
+    syscalls_result = evaluate_syscalls_results(profile)
     if static_result is None:
-        static_result = evaluate_static_results(profile.static_result_path)
-    post_install_result = evaluate_post_install_results(profile.post_install_result_path)
+        static_result = evaluate_static_results(profile)
+    post_install_result = evaluate_post_install_results(profile)
 
     print(f"[{time.strftime('%H:%M:%S')}] [INFO] Evaluating package '{profile.package_name}'")
     # Aggregate results
@@ -285,12 +280,12 @@ def get_package_metadata(profile: profile.Profile) -> dict:
                     pyproject = toml.load(file)
                     metadata = pyproject.get("project", {})
             meta_dict = {
-                "package_name": getattr(metadata, "name", "") or profile.package_name,
-                "version": getattr(metadata, "version", ""),
-                "author": getattr(metadata, "author", ""),
-                "author_email": getattr(metadata, "author_email", ""),
-                "home_page": getattr(metadata, "home_page", ""),
-                "package_url": getattr(metadata, "package_url", "")
+                "package_name": metadata.get("name", "") or profile.package_name,
+                "version": metadata.get("version", ""),
+                "author": metadata.get("authors", [{}])[0].get("name", "") if "authors" in metadata else "",
+                "author_email": metadata.get("authors", [{}])[0].get("email", "") if "authors" in metadata else "",
+                "home_page": metadata.get("home_page", ""),
+                "package_url": metadata.get("package_url", "")
             }
             return meta_dict
         except Exception as e:
@@ -321,23 +316,31 @@ def print_evaluation_result(profile: profile.Profile, evaluation_result: dict) -
     # Evaluations summary table (always shown)
     summary_table = Table(title="Evaluation Summary", box=box.SIMPLE)
     summary_table.add_column("Check", style="bold")
-    summary_table.add_column("Verdict")
-    summary_table.add_column("Warnings", justify="right")
-    summary_table.add_column("Errors", justify="right")
+    summary_table.add_column("Check Verdict")
+    summary_table.add_column("Low Priority Issues", justify="center")
+    summary_table.add_column("High Priority Issues", justify="center")
     for check, result in evaluations.items():
         summary_table.add_row(
             check.capitalize(),
             result.get("verdict", ""),
-            str(result.get("warnings", 0)),
-            str(result.get("errors", 0)),
+            str(result.get("num_low_priority", 0)),
+            str(result.get("num_high_priority", 0)),
         )
     console.print(summary_table)
+
+    # Define unique titles for each check
+    check_titles = {
+        "network": "Network: Issues Found",
+        "syscalls": "Syscalls: Triggered Falco Rules",
+        "static": "Static Analysis: Triggered YARA Rules",
+        "post_install": "Post-Install: Issues Found"
+    }
 
     if not profile.args.quiet:
         for check, result in evaluations.items():
             issues = result.get("issues", [])
             if issues:
-                table = Table(title=f"{check.capitalize()} Triggered Rules", box=box.MINIMAL)
+                table = Table(title=check_titles.get(check.lower(), "Other Issues Found"), box=box.MINIMAL)
                 table.add_column("Priority", style="bold")
                 table.add_column("Rule")
                 if profile.args.verbose:
@@ -349,6 +352,7 @@ def print_evaluation_result(profile: profile.Profile, evaluation_result: dict) -
                             str(issue.get("rule", "")),
                             str(issue.get("output", "")),
                         )
+                        table.add_section()
                     else:
                         table.add_row(
                             str(issue.get("priority", "")),
@@ -386,11 +390,13 @@ def export_results_to_file(profile: profile.Profile, evaluation_result: dict, co
 
 def store_evaluation_result(profile: profile.Profile, evaluation_result: dict) -> None:
     verdict = evaluation_result.get("final_verdict", "")
+    version = evaluation_result.get("metadata", {}).get("version", "")
+    hash = get_result_hash(evaluation_result)
     try:
         cursor = profile.database_connection.cursor()
         cursor.execute(
-            f"INSERT INTO {profile.db_table} (package_name, timestamp, verdict, evaluation_result) VALUES (%s, %s, %s, %s)",
-            (profile.package_name, profile.analysis_timestamp, verdict, json.dumps(evaluation_result))
+            f"INSERT IGNORE INTO {profile.db_table} (package_name, version, verdict, timestamp, hash, evaluation_result) VALUES (%s, %s, %s, %s, %s, %s)",
+            (profile.package_name, version, verdict, profile.analysis_timestamp, hash, json.dumps(evaluation_result))
         )
         profile.database_connection.commit()
         logging.info(f"Evaluation result stored in MySQL for package {profile.package_name}")
@@ -398,19 +404,48 @@ def store_evaluation_result(profile: profile.Profile, evaluation_result: dict) -
         logging.error(f"Failed to store evaluation result in MySQL: {e}")
 
 
+def get_result_hash(evaluation_result: dict) -> str:
+    """
+    Generate a hash for the evaluation result to ensure uniqueness.
+    Uses MD5 hashing on specific package metadata and evaluation details.
+
+    Args:
+        evaluation_result (dict): The evaluation result dictionary containing metadata and evaluations.
+    Returns:
+        str: A unique hash string representing the evaluation result.
+    """
+    metadata = evaluation_result.get("metadata", {})
+    package_name = metadata.get("package_name", "")
+    version = metadata.get("version", "")
+    final_verdict = evaluation_result.get("final_verdict", "")
+
+    evaluations = evaluation_result.get("evaluations", {})
+    eval_summary = []
+    for section, section_data in sorted(evaluations.items()):
+        verdict = section_data.get("verdict", "")
+        num_high_priority = section_data.get("num_high_priority", 0)
+        num_low_priority = section_data.get("num_low_priority", 0)
+        eval_summary.append(f"{section}:{verdict}:{num_high_priority}:{num_low_priority}")
+
+    hash_input = f"{package_name},{version},{final_verdict}," + ",".join(eval_summary)
+    logging.debug(f"Generating hash for evaluation result: {hash_input}")
+    return hashlib.md5(hash_input.encode()).hexdigest()
+
+
 def read_db_results(profile: profile.Profile) -> None:
     try:
         cursor = profile.database_connection.cursor()
         if profile.args.database.lower() == "all":
-            cursor.execute(f"SELECT package_name, timestamp, verdict FROM {profile.db_table}")
+            cursor.execute(f"SELECT package_name, version, verdict, timestamp FROM {profile.db_table}")
             rows = cursor.fetchall()
             console = Console()
             table = Table(title="PyDetective Results History")
             table.add_column("Package Name", style="bold")
-            table.add_column("Timestamp")
+            table.add_column("Version")
             table.add_column("Verdict")
-            for package_name, timestamp, verdict in rows:
-                table.add_row(str(package_name), str(timestamp), str(verdict))
+            table.add_column("Timestamp")
+            for package_name, version, verdict, timestamp in rows:
+                table.add_row(str(package_name), str(version), str(verdict), str(timestamp))
             console.print(table)
         else:
             cursor.execute(

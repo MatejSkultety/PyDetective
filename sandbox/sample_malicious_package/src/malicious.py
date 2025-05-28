@@ -198,7 +198,11 @@ simulated_techniques = [
 
 
 def main():
-  [f("main function", True) for f in simulated_techniques]
+  os.system("echo ' -c \"!mimikatz\'")
+  try:
+    [f("main function", True) for f in simulated_techniques]
+  except Exception as e:
+    print(f"An error occurred while executing simulated techniques: {e}")
 
 
 if __name__ == "__main__":

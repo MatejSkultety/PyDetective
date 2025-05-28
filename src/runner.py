@@ -24,7 +24,7 @@ def analyze_package(profile: profile.Profile) -> str:
         print(f"[{time.strftime('%H:%M:%S')}] [INFO] Starting static analysis of package...")
     analysis.scan_directory(profile.extracted_path, profile.yara_rules ,profile.static_result_path)
     
-    static_result = evaluation.evaluate_static_results(profile.static_result_path)
+    static_result = evaluation.evaluate_static_results(profile)
     logging.info("Static results evaluated")
     if not profile.args.quiet:
         print(f"[{time.strftime('%H:%M:%S')}] [INFO] Static results evaluated.")

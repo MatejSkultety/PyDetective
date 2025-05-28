@@ -8,6 +8,7 @@ from datetime import datetime
 import ipwhois
 import logging
 import whois
+import ipaddress
 
 from . import profile
 
@@ -34,9 +35,15 @@ def parse_network_artefacts(profile: profile.Profile) -> tuple[set, set]:
         if 'IP' in packet:
             src_ip = packet.ip.src
             dst_ip = packet.ip.dst
-            if src_ip not in profile.ignored_ips:
+            if (
+                src_ip not in profile.ignored_ips
+                and not ipaddress.ip_address(src_ip).is_private
+            ):
                 ip_addresses.add(src_ip)
-            if dst_ip not in profile.ignored_ips:
+            if (
+                dst_ip not in profile.ignored_ips
+                and not ipaddress.ip_address(dst_ip).is_private
+            ):
                 ip_addresses.add(dst_ip)
         if 'DNS' in packet:
             if hasattr(packet.dns, 'qry_name'):
@@ -49,10 +56,16 @@ def parse_network_artefacts(profile: profile.Profile) -> tuple[set, set]:
                     domain_names.add(cname)
             # Check for A and AAAA records (IPv4/IPv6) in DNS responses
             if hasattr(packet.dns, 'a') and packet.dns.a:
-                if packet.dns.a not in profile.ignored_ips:
+                if (
+                    packet.dns.a not in profile.ignored_ips
+                    and not ipaddress.ip_address(packet.dns.a).is_private
+                ):
                     ip_addresses.add(packet.dns.a)
             if hasattr(packet.dns, 'aaaa') and packet.dns.aaaa:
-                if packet.dns.aaaa not in profile.ignored_ips:
+                if (
+                    packet.dns.aaaa not in profile.ignored_ips
+                    and not ipaddress.ip_address(packet.dns.aaaa).is_private
+                ):
                     ip_addresses.add(packet.dns.aaaa)
     cap.close()
     return ip_addresses, domain_names

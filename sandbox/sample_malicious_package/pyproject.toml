@@ -1,11 +1,13 @@
 [project]
 name = "sample_malicious_package"
 version = "0.0.1"
-author = "Matej Skultety"
-author_email = "xskultety@stuba.sk"
 description = "A sample malicious package for academic purpose only"
 requires-python = ">=3.7"
 classifiers = [
     "Programming Language :: Python :: 3",
     "Operating System :: OS Independent",
+]
+
+authors = [
+    { name = "Matej Skultety", email = "xskultety@stuba.sk" }
 ]
