@@ -3,6 +3,8 @@ name = "sample_malicious_package"
 version = "0.0.1"
 description = "A sample malicious package for academic purpose only"
 requires-python = ">=3.7"
+home_page = "https://github.com/MatejSkultety/PyDetective"
+package_url = "https://github.com/MatejSkultety/PyDetective"
 classifiers = [
     "Programming Language :: Python :: 3",
     "Operating System :: OS Independent",
