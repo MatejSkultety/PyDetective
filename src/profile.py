@@ -129,6 +129,23 @@ class Profile:
                 logging.error(f"'ignored_syscalls' must be a list of strings in the configuration file")
                 print("Exiting program ...")
                 sys.exit(1)
+        else:
+            self.ignored_syscalls = []
+
+        self.thresholds = config.get('thresholds')
+        if self.thresholds:
+            self.MAX_TOLERATED_LOW_PRIORITY_NETWORK = self.thresholds.get('MAX_TOLERATED_LOW_PRIORITY_NETWORK', 0)
+            self.MAX_TOLERATED_HIGH_PRIORITY_NETWORK = self.thresholds.get('MAX_TOLERATED_HIGH_PRIORITY_NETWORK', 0)
+            self.MAX_TOLERATED_LOW_PRIORITY_SYSCALLS = self.thresholds.get('MAX_TOLERATED_LOW_PRIORITY_SYSCALLS', 0)
+            self.MAX_TOLERATED_HIGH_PRIORITY_SYSCALLS = self.thresholds.get('MAX_TOLERATED_HIGH_PRIORITY_SYSCALLS', 0)
+            self.MAX_TOLERATED_LOW_PRIORITY_STATIC = self.thresholds.get('MAX_TOLERATED_LOW_PRIORITY_STATIC', 0)
+            self.MAX_TOLERATED_HIGH_PRIORITY_STATIC = self.thresholds.get('MAX_TOLERATED_HIGH_PRIORITY_STATIC', 0)
+            self.MAX_TOLERATED_HIGH_PRIORITY_POST_INSTALL = self.thresholds.get('MAX_TOLERATED_HIGH_PRIORITY_POST_INSTALL', 0)
+        else:
+            print(f"[{time.strftime('%H:%M:%S')}] [ERROR] Thresholds are not present in the configuration file ...")
+            logging.error(f"Thresholds are not present in the configuration file")
+            print("Exiting program ...")
+            sys.exit(1)
 
         self.terminal_size = None
         self.analysis_timestamp = None

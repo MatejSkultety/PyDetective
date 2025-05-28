@@ -23,7 +23,7 @@ class Verdict(Enum):
     MALICIOUS = "MALICIOUS"
 
 
-def evaluate_network_results(source_path: str) -> dict:
+def evaluate_network_results(profile: profile.Profile) -> dict:
     result = {
         "num_low_priority": 0,
         "num_high_priority": 0,
@@ -31,7 +31,7 @@ def evaluate_network_results(source_path: str) -> dict:
         "issues": []
     }
 
-    with open(source_path, "r") as file:
+    with open(profile.network_result_path, "r") as file:
         data = json.load(file)
 
         # Evaluate IP addresses
@@ -91,16 +91,16 @@ def evaluate_network_results(source_path: str) -> dict:
                 result["issues"].append(issue)
                 result["num_low_priority"] += 1
 
-    if result["num_high_priority"] > 0:
+    if result["num_high_priority"] > profile.MAX_TOLERATED_HIGH_PRIORITY_NETWORK:
         result["verdict"] = Verdict.MALICIOUS.value
-    elif result["num_low_priority"] > 0:
+    elif result["num_low_priority"] > profile.MAX_TOLERATED_LOW_PRIORITY_NETWORK:
         result["verdict"] = Verdict.DANGEROUS.value
     else:
         result["verdict"] = Verdict.SAFE.value
     return result
 
 
-def evaluate_syscalls_results(source_path: str) -> dict:
+def evaluate_syscalls_results(profile: profile.Profile) -> dict:
     result = {
         "num_low_priority": 0,
         "num_high_priority": 0,
@@ -108,7 +108,7 @@ def evaluate_syscalls_results(source_path: str) -> dict:
         "issues": []
     }
 
-    with open(source_path, "r") as file:
+    with open(profile.syscalls_result_path, "r") as file:
         for line in file:
             try:
                 event = json.loads(line.strip())
@@ -127,16 +127,16 @@ def evaluate_syscalls_results(source_path: str) -> dict:
                 result["issues"].append(formatted_event)
             except json.JSONDecodeError:
                 continue
-    if result["num_high_priority"] > 0:
+    if result["num_high_priority"] > profile.MAX_TOLERATED_HIGH_PRIORITY_SYSCALLS:
         result["verdict"] = Verdict.MALICIOUS.value
-    elif result["num_low_priority"] > 0:
+    elif result["num_low_priority"] > profile.MAX_TOLERATED_LOW_PRIORITY_SYSCALLS:
         result["verdict"] = Verdict.DANGEROUS.value
     else:
         result["verdict"] = Verdict.SAFE.value
     return result
 
 
-def evaluate_static_results(source_path: str) -> dict:
+def evaluate_static_results(profile: profile.Profile) -> dict:
     result = {
         "num_low_priority": 0,
         "num_high_priority": 0,
@@ -144,7 +144,7 @@ def evaluate_static_results(source_path: str) -> dict:
         "issues": []
     }
 
-    with open(source_path, "r") as file:
+    with open(profile.static_result_path, "r") as file:
         try:
             data = json.load(file)  # Load the JSON array from the file
             for entry in data:
@@ -168,16 +168,16 @@ def evaluate_static_results(source_path: str) -> dict:
 
         except json.JSONDecodeError:
             print("Invalid JSON file encountered, skipping.")
-    if result["num_high_priority"] > 0:
+    if result["num_high_priority"] > profile.MAX_TOLERATED_HIGH_PRIORITY_STATIC:
         result["verdict"] = Verdict.MALICIOUS.value
-    elif result["num_low_priority"] > 0:
+    elif result["num_low_priority"] > profile.MAX_TOLERATED_LOW_PRIORITY_STATIC:
         result["verdict"] = Verdict.DANGEROUS.value
     else:
         result["verdict"] = Verdict.SAFE.value
     return result
 
 
-def evaluate_post_install_results(source_path: str) -> dict:
+def evaluate_post_install_results(profile: profile.Profile) -> dict:
     result = {
         "num_low_priority": 0,
         "num_high_priority": 0,
@@ -185,7 +185,7 @@ def evaluate_post_install_results(source_path: str) -> dict:
         "issues": []
     }
     try:
-        with open(source_path, "r") as file:
+        with open(profile.post_install_result_path, "r") as file:
             for line in file:
                 if "SCAN SUMMARY" in line:
                     break
@@ -197,8 +197,8 @@ def evaluate_post_install_results(source_path: str) -> dict:
                     })
                     result["num_high_priority"] += 1
     except FileNotFoundError:
-        logging.error(f"Post-install result file not found: {source_path}")
-    if result["num_high_priority"] > 0:
+        logging.error(f"Post-install result file not found: {profile.post_install_result_path}")
+    if result["num_high_priority"] > profile.MAX_TOLERATED_HIGH_PRIORITY_POST_INSTALL:
         result["verdict"] = Verdict.MALICIOUS.value
     else:
         result["verdict"] = Verdict.SAFE.value
@@ -208,11 +208,11 @@ def evaluate_post_install_results(source_path: str) -> dict:
 
 def evaluate_package(profile: profile.Profile, static_result: dict = None) -> dict:
     # Call individual evaluation functions
-    network_result = evaluate_network_results(profile.network_result_path)
-    syscalls_result = evaluate_syscalls_results(profile.syscalls_result_path)
+    network_result = evaluate_network_results(profile)
+    syscalls_result = evaluate_syscalls_results(profile)
     if static_result is None:
-        static_result = evaluate_static_results(profile.static_result_path)
-    post_install_result = evaluate_post_install_results(profile.post_install_result_path)
+        static_result = evaluate_static_results(profile)
+    post_install_result = evaluate_post_install_results(profile)
 
     print(f"[{time.strftime('%H:%M:%S')}] [INFO] Evaluating package '{profile.package_name}'")
     # Aggregate results
@@ -317,8 +317,8 @@ def print_evaluation_result(profile: profile.Profile, evaluation_result: dict) -
     summary_table = Table(title="Evaluation Summary", box=box.SIMPLE)
     summary_table.add_column("Check", style="bold")
     summary_table.add_column("Check Verdict")
-    summary_table.add_column("Low Priority Issues", justify="right")
-    summary_table.add_column("High Priority Issues", justify="right")
+    summary_table.add_column("Low Priority Issues", justify="center")
+    summary_table.add_column("High Priority Issues", justify="center")
     for check, result in evaluations.items():
         summary_table.add_row(
             check.capitalize(),
