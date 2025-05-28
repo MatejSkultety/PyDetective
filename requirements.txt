@@ -1,5 +1,12 @@
 docker
-PyYAML
+ipwhois
+mysql-connector-python
+pkginfo
 pyshark
-yara
+PyYAML
+requests
+rich
 toml
+weasyprint
+whois
+yara
