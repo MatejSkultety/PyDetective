@@ -9,6 +9,9 @@ import time
 
 import pkginfo
 import rich
+import rich.console
+import rich.panel
+import rich.table
 import toml
 import weasyprint
 
@@ -349,6 +352,17 @@ def get_package_metadata(profile: profile.Profile) -> dict:
 
 
 def print_evaluation_result(profile: profile.Profile, evaluation_result: dict) -> None:
+    """
+    Print the evaluation result in a formatted way using rich library.
+    It displays the package metadata, timestamp, final verdict, and detailed evaluations.
+    If the profile is set to write results, it exports the results to a file in the specified format (JSON, HTML, or PDF).
+
+    Args:
+        profile (profile.Profile): The profile containing the evaluation settings and paths.
+        evaluation_result (dict): The evaluation result dictionary containing metadata and evaluations.
+    Returns:
+        None
+    """
     print('.' * profile.terminal_size.columns)
     console = rich.console.Console(record=True)
     metadata = evaluation_result.get("metadata", {})
@@ -356,66 +370,89 @@ def print_evaluation_result(profile: profile.Profile, evaluation_result: dict) -
     final_verdict = evaluation_result.get("final_verdict", "")
     evaluations = evaluation_result.get("evaluations", {})
 
-    # Header panel and metadata table (skip if quiet)
     header = f"[bold]PyDetective Analysis Result[/bold]\n[dim]Timestamp:[/dim] {timestamp}\n[dim]Final Verdict:[/dim] [bold]{final_verdict}[/bold]"
     console.print(rich.panel.Panel(header, expand=False))
-
     if metadata and not profile.args.quiet:
-        meta_table = rich.table.Table(title="Package Metadata", box=rich.box.SIMPLE)
-        meta_table.add_column("Key", style="bold")
-        meta_table.add_column("Value")
-        for k, v in metadata.items():
-            meta_table.add_row(str(k), str(v))
-        console.print(meta_table)
+        console.print(create_metadata_table(metadata))
+    console.print(create_summary_table(evaluations))
+    if not profile.args.quiet:
+        for check, result in evaluations.items():
+            issues = result.get("issues", [])
+            if issues:
+                console.print(create_issues_table(check, issues, profile.args.verbose))
+    if profile.args.write and not profile.args.database:
+        export_results_to_file(profile, evaluation_result, console)
 
-    # Evaluations summary table (always shown)
-    summary_table = rich.table.Table(title="Evaluation Summary", box=rich.box.SIMPLE)
-    summary_table.add_column("Check", style="bold")
-    summary_table.add_column("Check Verdict")
-    summary_table.add_column("Low Priority Issues", justify="center")
-    summary_table.add_column("High Priority Issues", justify="center")
+
+def create_metadata_table(metadata: dict) -> rich.table.Table:
+    """
+    Create a table for displaying package metadata.
+
+    Args:
+        metadata (dict): A dictionary containing package metadata such as name, version, author, etc.
+    Returns:
+        rich.table.Table: A table containing the package metadata with keys and values.
+    """
+    table = rich.table.Table(title="Package Metadata", box=rich.box.SIMPLE)
+    table.add_column("Key", style="bold")
+    table.add_column("Value")
+    for k, v in metadata.items():
+        table.add_row(str(k), str(v))
+    return table
+
+
+def create_summary_table(evaluations: dict) -> rich.table.Table:
+    """
+    Create a summary table for the evaluation results.
+
+    Args:
+        evaluations (dict): A dictionary containing the evaluation results for each check.
+    Returns:
+        rich.table.Table: A table summarizing the evaluation results, including the number of low and high priority issues.
+    """
+    table = rich.table.Table(title="Evaluation Summary", box=rich.box.SIMPLE)
+    table.add_column("Check", style="bold")
+    table.add_column("Check Verdict")
+    table.add_column("Low Priority Issues", justify="center")
+    table.add_column("High Priority Issues", justify="center")
     for check, result in evaluations.items():
-        summary_table.add_row(
+        table.add_row(
             check.capitalize(),
             result.get("verdict", ""),
             str(result.get("num_low_priority", 0)),
             str(result.get("num_high_priority", 0)),
         )
-    console.print(summary_table)
+    return table
 
-    # Define unique titles for each check
+
+def create_issues_table(check: str, issues: list, verbose: bool) -> rich.table.Table:
+    """
+    Create a table for displaying issues found during the evaluation of a specific check.
+    Args:
+        check (str): The type of check (e.g., "network", "syscalls", "static", "post_install").
+        issues (list): A list of issues found during the evaluation.
+        verbose (bool): If True, includes detailed output in the table.
+    Returns:
+        rich.table.Table: A table containing the issues with their priority, rule, and output.
+    """
     check_titles = {
         "network": "Network: Issues Found",
         "syscalls": "Syscalls: Triggered Falco Rules",
         "static": "Static Analysis: Triggered YARA Rules",
         "post_install": "Post-Install: Issues Found"
     }
-
-    if not profile.args.quiet:
-        for check, result in evaluations.items():
-            issues = result.get("issues", [])
-            if issues:
-                table = rich.table.Table(title=check_titles.get(check.lower(), "Other Issues Found"), box=rich.box.MINIMAL)
-                table.add_column("Priority", style="bold")
-                table.add_column("Rule")
-                if profile.args.verbose:
-                    table.add_column("Output", overflow="fold")
-                for issue in issues:
-                    if profile.args.verbose:
-                        table.add_row(
-                            str(issue.get("priority", "")),
-                            str(issue.get("rule", "")),
-                            str(issue.get("output", "")),
-                        )
-                        table.add_section()
-                    else:
-                        table.add_row(
-                            str(issue.get("priority", "")),
-                            str(issue.get("rule", "")),
-                        )
-                console.print(table)
-    if profile.args.write and not profile.args.database:
-        export_results_to_file(profile, evaluation_result, console)
+    table = rich.table.Table(title=check_titles.get(check.lower(), "Other Issues Found"), box=rich.box.MINIMAL)
+    table.add_column("Priority", style="bold")
+    table.add_column("Rule")
+    if verbose:
+        table.add_column("Output", overflow="fold")
+    for issue in issues:
+        if verbose:
+            table.add_row(str(issue.get("priority", "")), str(issue.get("rule", "")), str(issue.get("output", "")))
+            table.add_section()
+        else:
+            table.add_row(str(issue.get("priority", "")), str(issue.get("rule", "")))
+    return table
 
 
 def export_results_to_file(profile: profile.Profile, evaluation_result: dict, console: rich.console.Console) -> None:
