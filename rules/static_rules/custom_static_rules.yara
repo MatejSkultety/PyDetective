@@ -26,12 +26,11 @@ rule Suspicious_SSH_Key_Access
     strings:
         $ssh_dir = ".ssh" nocase ascii wide
         $open_r = "open(" nocase ascii wide
-        $expanduser = "os.path.expanduser" nocase ascii wide
         $id_rsa = "id_rsa" nocase ascii wide
         $id_ed25519 = "id_ed25519" nocase ascii wide
         $private = "PRIVATE KEY" nocase ascii wide
     condition:
-        ($ssh_dir or $id_rsa or $id_ed25519) and $open_r and $expanduser
+        ($ssh_dir or $id_rsa or $id_ed25519) and $open_r
 }
 
 rule Suspicious_Password_File_Access
