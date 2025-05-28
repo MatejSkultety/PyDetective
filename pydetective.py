@@ -10,7 +10,8 @@ import docker
 import mysql.connector
 import yaml
 
-from src import analysis, containers, evaluation, profile, runner
+from src import analysis, containers, evaluation, runner
+from src.profile import Profile
 
 
 def banner() -> None:
@@ -123,14 +124,14 @@ def is_local_package(package_name: str) -> bool:
         return False
 
 
-def check_required_structure(profile: profile.Profile) -> None:
+def check_required_structure(profile: Profile) -> None:
     """
     Checks if the required directory structure for PyDetective exists.
     If any directories are missing, they are created.
     Exits the program if critical directories are missing.
 
     Args:
-        profile (profile.Profile): The profile object containing paths and configuration.
+        profile (Profile): The profile object containing paths and configuration.
     Returns:
         None
     """
@@ -344,12 +345,12 @@ def init_logger() -> None:
     logger = logging.getLogger('__name__')
 
 
-def init_database(profile: profile.Profile) -> mysql.connector.connection.MySQLConnection:
+def init_database(profile: Profile) -> mysql.connector.connection.MySQLConnection:
     """
     Initializes the MySQL database connection and creates the required table if it does not exist.
 
     Args:
-        profile (profile.Profile): The profile object containing database configuration.
+        profile (Profile): The profile object containing database configuration.
     Returns:
         mysql.connector.connection.MySQLConnection: The initialized database connection.
     """
@@ -376,7 +377,7 @@ def init_database(profile: profile.Profile) -> mysql.connector.connection.MySQLC
         return connection
 
 
-def init_pydetective(args: argparse.Namespace) -> profile.Profile:
+def init_pydetective(args: argparse.Namespace) -> Profile:
     """
     Initializes the PyDetective application by setting up the logger, checking system requirements,
     loading the configuration file, and verifying the required directory structure. Profile attributes
@@ -385,19 +386,19 @@ def init_pydetective(args: argparse.Namespace) -> profile.Profile:
     Args:
         args (argparse.Namespace): The parsed command line arguments.
     Returns:
-        profile.Profile: The initialized profile object containing configuration and paths.
+        Profile: The initialized profile object containing configuration and paths.
     """
     init_logger()
     logging.info("Initializing PyDetective")
     is_system_platform_supported()
     is_root()
 
-    if is_yaml_file(args.config, "yaml"):
+    if is_yaml_file(args.config):
         logging.info(f"Loading configuration file '{args.config}'")
         if not args.quiet:
             print(f"[{time.strftime('%H:%M:%S')}] [INFO] Loading configuration file '{args.config}'...")
         config = load_config(args.config)
-        profile = profile.Profile(config, args)
+        profile = Profile(config, args)
         #Set profile attributes which are not in config file
         profile.analysis_timestamp = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         profile.terminal_size = os.get_terminal_size()
