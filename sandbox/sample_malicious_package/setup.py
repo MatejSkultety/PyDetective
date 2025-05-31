@@ -15,7 +15,7 @@ setuptools.setup(name= "sample_malicious_package", packages = setuptools.find_pa
 
 try:
     pathlib.Path("/temp").mkdir(parents=True, exist_ok=True)
-    with open("/temp/virus.txt", "w", encoding="utf-8") as buffer:
+    with open("/temp/virus_setup.txt", "w", encoding="utf-8") as buffer:
         buffer.write(f"I was here at {datetime.datetime.now()} ;>")
 except Exception as e:
     print(f"An error occurred while writing to /temp/virus.txt: {e}")

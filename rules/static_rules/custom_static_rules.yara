@@ -90,12 +90,11 @@ rule Suspicious_Obfuscated_Code
     strings:
         $base64 = "base64.b64decode" nocase ascii wide
         $exec = "exec(" nocase ascii wide
-        $decode = ".decode(" nocase ascii wide
         $marshal = "marshal.loads" nocase ascii wide
         $compile = "compile(" nocase ascii wide
         $hex = ".fromhex(" nocase ascii wide
     condition:
-        ($base64 or $hex or $marshal) and ($exec or $compile) and $decode
+        ($base64 or $hex or $marshal) and ($exec or $compile)
 }
 
 rule Suspicious_Binary_Exec
