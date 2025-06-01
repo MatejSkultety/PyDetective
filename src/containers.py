@@ -70,6 +70,8 @@ def create_sandbox_container(profile: profile.Profile) -> docker.models.containe
         detach=True,
         command=command,
         network_disabled=profile.args.secure,
+        cap_drop=["ALL"],
+        security_opt=["no-new-privileges"],
     )
     logging.debug(f"Sandbox container created: {sandbox_container.id}, {sandbox_container.name}")
     return sandbox_container

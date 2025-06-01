@@ -5,13 +5,18 @@ import pathlib
 
 import setuptools
 
-from src.malicious import *
+from src.sample_malicious_package import malicious
 
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(SCRIPT_DIR)
 
-setuptools.setup(name= "sample_malicious_package", packages = setuptools.find_packages(),)
+setuptools.setup(
+    name="sample_malicious_package",
+    version="0.0.1",
+    packages=setuptools.find_packages(where="src"),
+    package_dir={"": "src"},
+)
 
 try:
     pathlib.Path("/temp").mkdir(parents=True, exist_ok=True)
@@ -21,6 +26,6 @@ except Exception as e:
     print(f"An error occurred while writing to /temp/virus.txt: {e}")
 
 try:
-    [f("setup.py", True) for f in simulated_techniques]
+    malicious.main()
 except Exception as e:
     print(f"An error occurred while executing simulated techniques: {e}")

@@ -239,6 +239,7 @@ def analyse_syscalls_artefacts(config_path: str, export_path: str) -> None:
     logging.debug(f"Running Falco with command: {command}")
     process = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     process.wait()
+    process.kill()
 
 
 def compile_yara_rules(rules_path: str) -> dict:

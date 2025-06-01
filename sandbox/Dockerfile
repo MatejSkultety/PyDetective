@@ -8,6 +8,9 @@ RUN apt-get update && \
     apt-get install -y clamav-daemon && \
     apt-get install -y clamav-freshclam && \
     apt-get clean && \
-    freshclam
+    freshclam && \
+    useradd -m matej
+
+USER matej
 
 COPY executor.py /app/executor.py
