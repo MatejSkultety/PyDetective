@@ -165,7 +165,9 @@ def enrich_ip(ip: str, profile: profile.Profile) -> dict:
         })
     except Exception:
         pass
-    result.update(check_ip_otx(ip, profile))
+    enrich_info = check_ip_otx(ip, profile)
+    if enrich_info:
+        result.update(enrich_info)
     return result
 
 
@@ -194,7 +196,9 @@ def enrich_domain(domain: str, profile: profile.Profile) -> dict:
         })
     except Exception:
         pass
-    result.update(check_domain_otx(domain, profile))
+    enriched_info = check_domain_otx(domain, profile)
+    if enriched_info:
+        result.update(enriched_info)
     return result
 
 

@@ -170,8 +170,10 @@ def download_package(profile: profile.Profile) -> str:
                 shutil.copy(profile.package_name, profile.archives_path)
                 extract_package(profile.archives_path, profile.extracted_path)
             else:
-                shutil.copytree(profile.package_name, profile.archives_local_path)
-                shutil.copytree(profile.package_name, profile.extracted_local_path)
+                archives_local_path = os.path.join(profile.archives_path, profile.package_name.split('/')[-1])
+                shutil.copytree(profile.package_name, archives_local_path)
+                extracted_local_path = os.path.join(profile.extracted_path, profile.package_name.split('/')[-1])
+                shutil.copytree(profile.package_name, extracted_local_path)
         except Exception as e:
             raise Exception(f"Failed to copy local package: {e}")
         return profile.package_name
