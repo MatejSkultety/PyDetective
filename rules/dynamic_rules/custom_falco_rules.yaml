@@ -9,7 +9,7 @@
 # Detects execution of suspicious network utilities or exfiltration tools
 - rule: Suspicious Network Utility Execution
   desc: Detects execution of curl, wget, nc, ncat, or python scripts that may exfiltrate data
-  condition: (evt.type = execve and (proc.name in ("curl", "wget", "nc", "ncat") or (proc.name = "python" and (proc.cmdline contains "requests" or proc.cmdline contains "http.client"))))
+  condition: (evt.type = execve and (proc.name in ("curl", "wget", "nc", "ncat", "python")))
   output: "Suspicious network utility execution (user=%user.name command=%proc.cmdline)"
   priority: WARNING
   tags: [network, exfiltration, process]
