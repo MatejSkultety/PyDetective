@@ -108,6 +108,15 @@ EOF
     log "Database setup complete."
 }
 
+function build_sandbox_docker_image() {
+    if [[ -d "sandbox" && -f "sandbox/Dockerfile" ]]; then
+        log "Building Docker image from sandbox/Dockerfile..."
+        docker build -t pydetective_sandbox_container:latest sandbox
+    else
+        log "No sandbox/Dockerfile found. Skipping Docker image build."
+    fi
+}
+
 function run_main() {
     if [[ -f "$MAIN_SCRIPT" ]]; then
         log "Running $MAIN_SCRIPT..."
@@ -130,8 +139,7 @@ log "Ensuring Python and pip..."
 ensure_python
 
 setup_virtualenv
-
-log "Setting up MySQL database..."
 setup_database
+build_sandbox_docker_image
 
 run_main
