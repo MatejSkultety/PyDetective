@@ -421,6 +421,12 @@ def init_pydetective(args: argparse.Namespace) -> Profile:
         except Exception as e:
             print(f"[{time.strftime('%H:%M:%S')}] [ERROR] Failed to delete {file_path}: {e}")
             logging.error(f"Failed to delete {file_path}: {e}")
+    if args.write:
+        if os.path.exists(args.write):
+            try:
+                os.remove(args.write)
+            except Exception as e:
+                logging.error(f"Failed to delete output file '{args.write}': {e}")
 
     profile.docker_client = docker.from_env()
     profile.database_connection = init_database(profile)

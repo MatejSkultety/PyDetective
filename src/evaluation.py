@@ -388,7 +388,11 @@ def print_evaluation_result(profile: profile.Profile, evaluation_result: dict) -
             if issues:
                 console.print(create_issues_table(check, issues, profile.args.verbose))
     if profile.args.write and not profile.args.database:
-        export_results_to_file(profile, evaluation_result, console)
+        try:
+            export_results_to_file(profile, evaluation_result, console)
+        except Exception as e:
+            logging.error(f"Failed to export results to file: {e}")
+            print(f"[{time.strftime('%H:%M:%S')}] [ERROR] Failed to export results to file: {e}")
 
 
 def create_metadata_table(metadata: dict) -> rich.table.Table:
@@ -513,11 +517,11 @@ def export_results_to_file(profile: profile.Profile, evaluation_result: dict, co
     export_path = profile.args.write
     export_format = export_path.split('.')[-1].lower()
     if export_format == 'json':
-        with open(export_path, 'w') as file:
-            json.dump(evaluation_result, file, indent=4)
-        logging.info(f"Results exported to {export_path}")
+        with open(export_path, 'a') as file:
+            file.write(json.dumps(evaluation_result, indent=4) + '\n')
+        logging.info(f"Results exported to {export_path} (JSONL format)")
     elif export_format == 'html':
-        with open(export_path, 'w') as file:
+        with open(export_path, 'a') as file:
             file.write(console.export_html())
         logging.info(f"Results exported to {export_path}")
     elif export_format == 'pdf':
@@ -527,8 +531,8 @@ def export_results_to_file(profile: profile.Profile, evaluation_result: dict, co
             file.write(pdf_content)
         logging.info(f"Results exported to {export_path}")
     else:
-        with open(export_path, 'w') as file:
-            json.dump(evaluation_result, file, indent=4)
+        with open(export_path, 'a') as file:
+            file.write(json.dumps(evaluation_result, intend=4) + '\n')
         logging.info(f"Unsuported format. Results exported to {export_path} as JSON")
         print(f"[{time.strftime('%H:%M:%S')}] [WARNING] Unsuported output format. Results exported to {export_path} as JSON.")
 
