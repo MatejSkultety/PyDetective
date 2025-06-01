@@ -369,8 +369,15 @@ def print_evaluation_result(profile: profile.Profile, evaluation_result: dict) -
     timestamp = evaluation_result.get("timestamp", "")
     final_verdict = evaluation_result.get("final_verdict", "")
     evaluations = evaluation_result.get("evaluations", {})
-
-    header = f"[bold]PyDetective Analysis Result[/bold]\n[dim]Timestamp:[/dim] {timestamp}\n[dim]Final Verdict:[/dim] [bold]{final_verdict}[/bold]"
+    package_name = metadata.get("package_name", "N/A")
+    package_version = metadata.get("version", "N/A")
+    header = (
+        f"[bold]PyDetective Analysis Result[/bold]\n"
+        f"[dim]Package:[/dim] {package_name}\n"
+        f"[dim]Version:[/dim] {package_version}\n"
+        f"[dim]Timestamp:[/dim] {timestamp}\n"
+        f"[dim]Final Verdict:[/dim] [bold]{final_verdict}[/bold]"
+    )
     console.print(rich.panel.Panel(header, expand=False))
     if metadata and not profile.args.quiet:
         console.print(create_metadata_table(metadata))

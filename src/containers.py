@@ -92,7 +92,7 @@ def extract_file_from_container(container: docker.models.containers.Container, s
         tar_stream = io.BytesIO(b''.join(bits))
         with tarfile.open(fileobj=tar_stream, mode="r|") as tar:
             tar.extractall(path=destination_path)
-        logging.error(f"File extracted from {source_path} in container to {destination_path}")
+        logging.debug(f"File extracted from {source_path} in container to {destination_path}")
     except docker.errors.APIError as e:
         logging.error(f"Error extracting file: {e}")
     except Exception as e:

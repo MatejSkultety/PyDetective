@@ -19,6 +19,7 @@ def analyze_package(profile: profile.Profile) -> str:
     Returns:
         verdict (str): The verdict of the analysis.
     """
+    logging.info(f"ANALYZING PACKAGE: {profile.package_name}")
     logging.info("Starting static analysis of package")
     if not profile.args.quiet:
         print(f"[{time.strftime('%H:%M:%S')}] [INFO] Starting static analysis of package...")
