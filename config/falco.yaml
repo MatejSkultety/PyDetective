@@ -200,8 +200,8 @@ rules_files:
   - /etc/falco/falco_rules.yaml
   - /etc/falco/falco_rules.local.yaml
   - /etc/falco/rules.d
+  - rules/dynamic_rules/extended_falco_rules.yaml
   - rules/dynamic_rules/custom_rules.yaml
-  - rules/dynamic_rules
 
 # [Incubating] `rules`
 #
