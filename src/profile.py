@@ -29,19 +29,6 @@ class Profile:
             print("Exiting program ...")
             sys.exit(1)
 
-        self.database = config.get('database')
-        if self.database:
-            self.db_host = self.database.get('host')
-            self.db_name = self.database.get('database_name')
-            self.db_user = self.database.get('user')
-            self.db_password = self.database.get('password')
-            self.db_table = self.database.get('table')
-
-        else:
-            print(f"[{time.strftime('%H:%M:%S')}] [ERROR] Database configurations are not present in the configuration file ...")
-            logging.error(f"Database configurations are not present in the configuration file")
-            print("Exiting program ...")
-            sys.exit(1)
 
         self.file_paths = config.get('file_paths')
         if self.file_paths:
@@ -70,6 +57,8 @@ class Profile:
             self.config_folder_path = self.file_paths.get('config_folder_path')
             self.src_folder_path = self.file_paths.get('src_folder_path')
             self.deepscan_output_path = self.file_paths.get('deepscan_output_path')
+            self.database_folder_path = self.file_paths.get('database_folder_path')
+            self.database_path = self.file_paths.get('database_path')
 
             # Check if any required file path is missing
             if any(file_path is None for file_path in self.file_paths.values()):
@@ -83,13 +72,14 @@ class Profile:
             print("Exiting program ...")
             sys.exit(1)
 
-        self.containers = config.get('containers')
-        if self.containers:
-            self.image_name = self.containers.get('image_name')
-            self.image_tag = self.containers.get('image_tag')
+        self.default_names = config.get('default_names')
+        if self.default_names:
+            self.image_name = self.default_names.get('image_name')
+            self.image_tag = self.default_names.get('image_tag')
+            self.db_table = self.default_names.get('db_table_name')
 
             # Check if any required container configuration is missing
-            if any(container_value is None for container_value in self.containers.values()):
+            if any(container_value is None for container_value in self.default_names.values()):
                 print(f"[{time.strftime('%H:%M:%S')}] [ERROR] The configuration file does not contain all required container configurations ...")
                 logging.error(f"The configuration file does not contain all required container configurations")
                 print("Exiting program ...")

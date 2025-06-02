@@ -7,7 +7,7 @@ import sys
 import time
 
 import docker
-import mysql.connector
+import sqlite3
 import yaml
 
 from src import analysis, containers, evaluation, runner
@@ -137,6 +137,7 @@ def check_required_structure(profile: Profile) -> None:
     """
     base_relative_path = os.path.dirname(os.path.realpath(sys.argv[0]))
     out_dir = os.path.join(base_relative_path, profile.output_folder_path)
+    database_dir = os.path.join(base_relative_path, profile.database_folder_path)
     sandbox_dir = os.path.join(base_relative_path, profile.sandbox_folder_path)
     src_dir = os.path.join(base_relative_path, profile.src_folder_path)
     config_dir = os.path.join(base_relative_path, profile.config_folder_path)
@@ -149,6 +150,10 @@ def check_required_structure(profile: Profile) -> None:
         print(f"[{time.strftime('%H:%M:%S')}] [INFO] Creating '{out_dir}' for storing analysis output files ...")
         logging.info(f"Creating '{out_dir}' for storing analysis output files")
         os.mkdir(out_dir)
+    if not os.path.isdir(database_dir):
+        print(f"[{time.strftime('%H:%M:%S')}] [INFO] Creating '{database_dir}' for storing SQLite database ...")
+        logging.info(f"Creating '{database_dir}' for storing SQLite database")
+        os.mkdir(database_dir)
 
     missing_config_files = False
     missing_rules = False
@@ -253,7 +258,7 @@ def parse_arguments() -> argparse.Namespace:
     )
     mode_group.add_argument(
         '-db', '--database', metavar='PACKAGE',
-        help="Display history of analyzed package from MySQL database or entire database if 'ALL' is specified"
+        help="Display history of analyzed package from SQLite database or entire database if 'ALL' is specified"
     )
     parser.add_argument(
         '-i', '--install', action='store_true',
@@ -345,33 +350,33 @@ def init_logger() -> None:
     logger = logging.getLogger('__name__')
 
 
-def init_database(profile: Profile) -> mysql.connector.connection.MySQLConnection:
+def init_database(profile: Profile) -> sqlite3.Connection:
     """
-    Initializes the MySQL database connection and creates the required table if it does not exist.
+    Initializes the SQLite database connection and creates the required table if it does not exist.
 
     Args:
         profile (Profile): The profile object containing database configuration.
     Returns:
-        mysql.connector.connection.MySQLConnection: The initialized database connection.
+        sqlite3.Connection: The initialized database connection.
     """
     try:
-        connection = mysql.connector.connect(host=profile.db_host, user=profile.db_user, password=profile.db_password, database=profile.db_name)
+        connection = sqlite3.connect(profile.database_path)
         cursor = connection.cursor()
         cursor.execute(f"""
             CREATE TABLE IF NOT EXISTS {profile.db_table} (
-                id INT AUTO_INCREMENT PRIMARY KEY,
-                package_name VARCHAR(255),
-                version VARCHAR(64),
-                verdict VARCHAR(16),
-                timestamp VARCHAR(32),
-                hash VARCHAR(64) UNIQUE,
-                evaluation_result JSON
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                package_name TEXT,
+                version TEXT,
+                verdict TEXT,
+                timestamp TEXT,
+                hash TEXT UNIQUE,
+                evaluation_result TEXT
             )
         """)
         connection.commit()
     except Exception as e:
-        logging.error(f"Failed to initialize MySQL database: {e}")
-        print(f"[{time.strftime('%H:%M:%S')}] [WARNING] Failed to initialize MySQL database: {e}")
+        logging.error(f"Failed to initialize SQLite database: {e}")
+        print(f"[{time.strftime('%H:%M:%S')}] [WARNING] Failed to initialize SQLite database: {e}")
         return None
     else:
         return connection

@@ -93,21 +93,6 @@ function setup_virtualenv() {
     fi
 }
 
-function setup_database() {
-    log "Installing MySQL Server..."
-    sudo apt-get update
-    sudo apt-get install -y mysql-server
-
-    log "Configuring MySQL database and user..."
-    sudo mysql <<EOF
-CREATE DATABASE IF NOT EXISTS ${DB_NAME};
-CREATE USER IF NOT EXISTS '${DB_USER}'@'localhost' IDENTIFIED BY '${DB_PASS}';
-GRANT ALL PRIVILEGES ON ${DB_NAME}.* TO '${DB_USER}'@'localhost';
-FLUSH PRIVILEGES;
-EOF
-    log "Database setup complete."
-}
-
 function build_sandbox_docker_image() {
     if [[ -d "sandbox" && -f "sandbox/Dockerfile" ]]; then
         log "Building Docker image from sandbox/Dockerfile..."
@@ -139,7 +124,6 @@ install_sysdig
 install_falco
 
 setup_virtualenv
-setup_database
 build_sandbox_docker_image
 
 run_main

@@ -539,7 +539,7 @@ def export_results_to_file(profile: profile.Profile, evaluation_result: dict, co
 
 def store_evaluation_result(profile: profile.Profile, evaluation_result: dict) -> None:
     """
-    Store the evaluation result in a MySQL database. Saves only unique results based on a hash of the evaluation.
+    Store the evaluation result in a SQLite database. Saves only unique results based on a hash of the evaluation.
 
     Args:
         profile (profile.Profile): The profile containing database connection and settings.
@@ -549,17 +549,17 @@ def store_evaluation_result(profile: profile.Profile, evaluation_result: dict) -
     """
     verdict = evaluation_result.get("final_verdict", "")
     version = evaluation_result.get("metadata", {}).get("version", "")
-    hash = get_result_hash(evaluation_result)
+    hash_val = get_result_hash(evaluation_result)
     try:
         cursor = profile.database_connection.cursor()
         cursor.execute(
-            f"INSERT IGNORE INTO {profile.db_table} (package_name, version, verdict, timestamp, hash, evaluation_result) VALUES (%s, %s, %s, %s, %s, %s)",
-            (profile.package_name, version, verdict, profile.analysis_timestamp, hash, json.dumps(evaluation_result))
+            f"INSERT OR IGNORE INTO {profile.db_table} (package_name, version, verdict, timestamp, hash, evaluation_result) VALUES (?, ?, ?, ?, ?, ?)",
+            (profile.package_name, version, verdict, profile.analysis_timestamp, hash_val, json.dumps(evaluation_result))
         )
         profile.database_connection.commit()
-        logging.info(f"Evaluation result stored in MySQL for package {profile.package_name}")
+        logging.info(f"Evaluation result stored in SQLite for package {profile.package_name}")
     except Exception as e:
-        logging.error(f"Failed to store evaluation result in MySQL: {e}")
+        logging.error(f"Failed to store evaluation result in SQLite: {e}")
 
 
 def get_result_hash(evaluation_result: dict) -> str:
@@ -592,10 +592,10 @@ def get_result_hash(evaluation_result: dict) -> str:
 
 def read_db_results(profile: profile.Profile) -> None:
     """
-    Read and display results from the MySQL database based on the profile's database settings.
+    Read and display results from the SQLite database based on the profile's database settings.
     If the database argument is set to "ALL", it retrieves all results from the specified table.
     If a specific package name is provided, it retrieves results for that package only.
-    
+
     Args:
         profile (profile.Profile): The profile containing database connection and arguments.
     Returns:
@@ -617,7 +617,7 @@ def read_db_results(profile: profile.Profile) -> None:
             console.print(table)
         else:
             cursor.execute(
-                f"SELECT evaluation_result FROM {profile.db_table} WHERE package_name = %s",
+                f"SELECT evaluation_result FROM {profile.db_table} WHERE package_name = ?",
                 (profile.args.database,)
             )
             rows = cursor.fetchall()
@@ -629,4 +629,4 @@ def read_db_results(profile: profile.Profile) -> None:
                 evaluation_result = json.loads(row[0])
                 print_evaluation_result(profile, evaluation_result)
     except Exception as e:
-        logging.error(f"Failed to read results from MySQL: {e}")
+        logging.error(f"Failed to read results from SQLite: {e}")
