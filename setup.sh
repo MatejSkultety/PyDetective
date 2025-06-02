@@ -41,6 +41,21 @@ function install_apt_tools() {
     done
 }
 
+function ensure_python() {
+    if check_command python3; then
+        PYTHON_EXEC=$(command -v python3)
+    else
+        error "Python 3 not found after attempted install."
+    fi
+
+    PYTHON_VERSION=$($PYTHON_EXEC -c 'import sys; print(".".join(map(str, sys.version_info[:2])))')
+    if [[ $(echo "$PYTHON_VERSION < $PYTHON_MIN_VERSION" | bc) -eq 1 ]]; then
+        error "Python version must be >= $PYTHON_MIN_VERSION. Found: $PYTHON_VERSION"
+    fi
+
+    export PYTHON_EXEC
+}
+
 function install_sysdig() {
     if ! check_command sysdig; then
         log "Installing Sysdig..."
@@ -59,21 +74,6 @@ function install_falco() {
     else
         log "Falco is already installed."
     fi
-}
-
-function ensure_python() {
-    if check_command python3; then
-        PYTHON_EXEC=$(command -v python3)
-    else
-        error "Python 3 not found after attempted install."
-    fi
-
-    PYTHON_VERSION=$($PYTHON_EXEC -c 'import sys; print(".".join(map(str, sys.version_info[:2])))')
-    if [[ $(echo "$PYTHON_VERSION < $PYTHON_MIN_VERSION" | bc) -eq 1 ]]; then
-        error "Python version must be >= $PYTHON_MIN_VERSION. Found: $PYTHON_VERSION"
-    fi
-
-    export PYTHON_EXEC
 }
 
 function setup_virtualenv() {
@@ -131,12 +131,12 @@ function run_main() {
 log "Installing APT packages..."
 install_apt_tools
 
+log "Ensuring Python and pip..."
+ensure_python
+
 log "Checking and installing Sysdig and Falco..."
 install_sysdig
 install_falco
-
-log "Ensuring Python and pip..."
-ensure_python
 
 setup_virtualenv
 setup_database

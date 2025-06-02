@@ -470,34 +470,30 @@ def main() -> None:
         print(f"[{time.strftime('%H:%M:%S')}] [INFO] All done. Exiting program ...")
         logging.info("All done. Exiting program")
         sys.exit(0)
-
-
+        
+    # Analyze all packages from requirements.txt or single package
     packages_to_analyze = parse_requirements_file(profile.package_name)
     for package_to_analyze in packages_to_analyze:
-        profile.package_name = package_to_analyze
-
-
-
-        profile.local_package = is_local_package(profile.package_name)
         try:
-            package_path = containers.download_package(profile)
+            # Analyze single package
+            profile.package_name = package_to_analyze
+            profile.local_package = is_local_package(profile.package_name)
+            try:
+                package_path = containers.download_package(profile)
+            except Exception as e:
+                print(f"[{time.strftime('%H:%M:%S')}] [ERROR] Failed to download package '{profile.package_name}': {e}")
+                logging.error(f"Failed to download package '{profile.package_name}': {e}")
+                print("Exiting program ...")
+                sys.exit(1)
+            verdict = runner.analyze_package(profile)
+            if args.install and verdict == evaluation.Verdict.SAFE.value:
+                runner.install_package_on_host(package_path, profile.local_package)
+            if not args.keep_files:
+                containers.delete_package(profile.downloaded_package_path)
         except Exception as e:
-            print(f"[{time.strftime('%H:%M:%S')}] [ERROR] Failed to download package '{profile.package_name}': {e}")
-            logging.error(f"Failed to download package '{profile.package_name}': {e}")
-            print("Exiting program ...")
-            sys.exit(1)
-
-        verdict = runner.analyze_package(profile)
-
-        if args.install and verdict == evaluation.Verdict.SAFE.value:
-            runner.install_package_on_host(package_path, profile.local_package)
-
-        if not args.keep_files:
-            containers.delete_package(profile.downloaded_package_path)
-
-
-
-
+            print(f"[{time.strftime('%H:%M:%S')}] [ERROR] An error occurred while analyzing package '{package_to_analyze}'.")
+            logging.error(f"An error occurred while analyzing package '{package_to_analyze}': {e}")
+            continue
 
     print('.' * profile.terminal_size.columns)
     print(f"[{time.strftime('%H:%M:%S')}] [INFO] All done. Exiting program ...")
