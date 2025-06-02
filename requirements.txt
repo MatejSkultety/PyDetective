@@ -1,6 +1,5 @@
 docker
 ipwhois
-mysql-connector-python
 pkginfo
 pyshark
 PyYAML

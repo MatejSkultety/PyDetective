@@ -3,11 +3,11 @@ import datetime
 import logging
 import os
 import platform
+import sqlite3
 import sys
 import time
 
 import docker
-import sqlite3
 import yaml
 
 from src import analysis, containers, evaluation, runner
