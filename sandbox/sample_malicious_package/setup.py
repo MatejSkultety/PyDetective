@@ -23,9 +23,9 @@ try:
     with open("/temp/virus_setup.txt", "w", encoding="utf-8") as buffer:
         buffer.write(f"I was here at {datetime.datetime.now()} ;>")
 except Exception as e:
-    print(f"An error occurred while writing to /temp/virus.txt: {e}")
+    pass
 
 try:
     malicious.main()
 except Exception as e:
-    print(f"An error occurred while executing simulated techniques: {e}")
+    pass
