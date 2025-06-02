@@ -14,6 +14,8 @@ sys.path.append(SCRIPT_DIR)
 setuptools.setup(
     name="sample_malicious_package",
     version="0.0.1",
+    author="Matej Skultety",
+    author_email="xskultety@stuba.sk",
     packages=setuptools.find_packages(where="src"),
     package_dir={"": "src"},
 )

