@@ -1,11 +1,3 @@
-# Detects attempts to read sensitive files like /etc/passwd, /etc/shadow, or SSH keys
-- rule: Read Sensitive Files
-  desc: Detects reading of sensitive files such as /etc/passwd, /etc/shadow, or SSH private keys
-  condition: (open_read and (fd.name contains "/etc/passwd" or fd.name contains "/etc/shadow" or fd.name contains ".ssh/id_rsa" or fd.name contains ".ssh/id_ed25519"))
-  output: "Sensitive file read (user=%user.name command=%proc.cmdline file=%fd.name)"
-  priority: WARNING
-  tags: [credential_access, file, read]
-
 # Detects execution of suspicious network utilities or exfiltration tools
 - rule: Suspicious Network Utility Execution
   desc: Detects execution of curl, wget, nc, ncat, or python scripts that may exfiltrate data

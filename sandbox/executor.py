@@ -4,6 +4,7 @@ import os
 import re
 import subprocess
 import time
+import pkgutil
 
 
 ARCHIVES_PATH = "/app/archives"
@@ -58,7 +59,7 @@ def import_packages(archives_path: str) -> None:
             importlib.import_module(pkg_name)
             print(f"[{time.strftime('%H:%M:%S')}] [INFO] [CONTAINER] Successfully imported '{pkg_name}'.")
         except Exception as e:
-            print(f"[{time.strftime('%H:%M:%S')}] [WARN] [CONTAINER] Could not import '{pkg_name}': {e}")
+            print(f"[{time.strftime('%H:%M:%S')}] [WARNING] [CONTAINER] Could not import '{pkg_name}': {e}")
 
 
 def scan_sandbox() -> None:
