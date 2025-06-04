@@ -6,9 +6,6 @@ set -e
 VENV_DIR="venv"
 REQUIREMENTS_FILE="requirements.txt"
 PYTHON_MIN_VERSION="3.7"
-DB_NAME="pydetective_db"
-DB_USER="pydetective_user"
-DB_PASS="pydetective_password"
 MAIN_SCRIPT="main.py"
 
 # --- Tools to check/install ---
@@ -49,7 +46,8 @@ function ensure_python() {
     fi
 
     PYTHON_VERSION=$($PYTHON_EXEC -c 'import sys; print(".".join(map(str, sys.version_info[:2])))')
-    if [[ $(echo "$PYTHON_VERSION < $PYTHON_MIN_VERSION" | bc) -eq 1 ]]; then
+    $PYTHON_EXEC -c "import sys; from distutils.version import LooseVersion as V; import sys; sys.exit(0 if V(sys.version.split()[0]) >= V('$PYTHON_MIN_VERSION') else 1)"
+    if [[ $? -ne 0 ]]; then
         error "Python version must be >= $PYTHON_MIN_VERSION. Found: $PYTHON_VERSION"
     fi
 
