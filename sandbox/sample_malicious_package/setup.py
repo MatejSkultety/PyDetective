@@ -123,7 +123,7 @@ def simulate_persistence():
     try:
         crontab_path = shutil.which("crontab")
         if crontab_path:
-            cronjob = '* * * * * echo "You were hacked!1"\n'
+            cronjob = '* * * * * echo "You were hacked!"\n'
             proc = subprocess.Popen([crontab_path, "-l"], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
             stdout, stderr = proc.communicate()
             current_cron = stdout.decode() if proc.returncode == 0 else ""
