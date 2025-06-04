@@ -195,9 +195,10 @@ def simulate_obfuscated_code_binary():
     Simulate execution of obfuscated code using actual binary data.
     """
     try:
-        source = 'print("You were hacked!")'
-        code = compile(source, '<string>', 'exec') # Todo
-        exec(code)
+        # This decodes to: print("You were hacked!")
+        binary_blob = b'\x70\x72\x69\x6e\x74\x28\x22\x59\x6f\x75\x20\x77\x65\x72\x65\x20\x68\x61\x63\x6b\x65\x64\x21\x22\x29'
+        code_str = binary_blob.decode('utf-8')
+        exec(code_str)
     except Exception as e:
         pass
 
