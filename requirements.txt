@@ -9,4 +9,4 @@ setuptools
 toml
 weasyprint
 whois
-yara
+yara-python
