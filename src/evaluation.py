@@ -190,7 +190,10 @@ def evaluate_static_results(profile: profile.Profile) -> dict:
                             }
                         }
                         result["issues"].append(formatted_event)
-                        result["num_high_priority"] += 1
+                        if formatted_event["priority"] == "HIGH":
+                            result["num_high_priority"] += 1
+                        else:
+                            result["num_low_priority"] += 1
         except json.JSONDecodeError:
             print("Invalid JSON file encountered, skipping.")
     if result["num_high_priority"] > profile.MAX_TOLERATED_HIGH_PRIORITY_STATIC:

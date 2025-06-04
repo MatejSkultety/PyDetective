@@ -97,5 +97,5 @@ def scan_syscalls(sandbox: docker.models.containers.Container, export_path: str,
         subprocess.Popen: The process object for the running sysdig command.
     """
     command = create_syscalls_command(sandbox, export_path, filters)
-    process = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE)
+    process = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     return process
