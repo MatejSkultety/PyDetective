@@ -63,20 +63,6 @@
   priority: CRITICAL
   tags: [host, container, bash, mitre_credential_accesss, unsecured_credential_access, T1552]
 
-#This Falco rule is designed to detect attempts to embed a script to execute at the time of boot or logon on a Linux system.
-#The rule will trigger an error priority alert if it detects any write access to the commonly used /etc directory,
-#which is often used for system configuration files and startup scripts.
-#https://attack.mitre.org/techniques/T1547/
-#Mitre Persistance: boot or logon autostart execution subscenario
-  
-- rule: Boot or Logon Autostart Execution
-  desc: an attempt to embedd a script to execute at the time of boot or logon
-  condition: write_etc_common
-  enabled: true
-  output: A script is embedded below /etc to start its execution on boot or logon in to the system 
-  priority: ERROR
-  tags: [host, container, process, mitre_persistance, boot_or_logon_autostart_execution, T1547]
-
 #This is a Falco rule that is designed to detect chown or chmod operations on a system.
 #The rule looks for instances where the chown or chmod command is executed using the execve system call.
 #The evt.type is set to execve, indicating that a process is being executed.
@@ -136,37 +122,6 @@
   priority: NOTICE
   tags: [host, container, user, account, mitre_persistance, create_account, T1136]
 
-#This is a Falco rule designed to detect an attempt to create a NodePort service in a Kubernetes cluster.
-#The rule will trigger an alert if it detects a Kubernetes API server event related to creating a NodePort service.
-#A Kubernetes event (kevt) must occur
-#The event must be related to creating a service (service)
-#The creation must be performed using the "kubectl create" command (kcreate)
-#The service type must be NodePort (ka.req.service.type=NodePort)
-  
-- rule: Create NodePort Service
-  desc: >
-    Detect an attempt to start a service with a NodePort service type
-  condition: kevt and service and kcreate and ka.req.service.type=NodePort
-  enabled: true
-  output: NodePort Service Created (user=%ka.user.name service=%ka.target.name ns=%ka.target.namespace ports=%ka.req.service.ports)
-  priority: WARNING
-  source: k8s_audit
-  tags: [k8s, nodeport]
-
-
-#this Falco rule is designed to detect attempts to create or modify system processes on a Linux system,
-#which can be a sign of a malicious actor attempting to maintain persistence on the system.
-#https://attack.mitre.org/techniques/T1543/
-#Mitre Persistance: Create or Modify system process
-#Mitre Priviledge Escalarion: Create or modify system process
-  
-- rule: Create or Modify System Process
-  desc: a system process may be created or a existing process may be modified to keep malicious process running continuously
-  condition: write_etc_common
-  enabled: true
-  output: A malicious system process is created or a existing process is modified to act like a malicious one
-  priority: ERROR
-  tags: [host, container, process, mitre_priviledge_escalation, create_or_modify_system_service, T1543]
 
 #system, which can be a sign of an attacker attempting to steal credentials.
 #The conditions for the rule to trigger are specified in the condition field, 
@@ -255,90 +210,6 @@
   output: "Suspicious disk activity (command=%proc.cmdline) detected"
   priority: WARNING
   tags: [host, container, disk, mitre_impact, disk_wipe, T1561]
-
-#The given rule is designed to detect suspicious activities related to disabling system recovery features. 
-#The rule looks for specific commands being executed such as rm -rf, chattr +i, mkfs.ext4 -E nodiscard, mount remount,ro, 
-#and disabling certain services such as systemd-backlight@.service, apport.service, rescue.service, emergency.service, and recovery-mode.service. 
-#https://attack.mitre.org/techniques/T1490/
-#Mitre Impact: Inhibit system recovery
-- list: recovery_files
-  items: [/etc/default/grub, /etc/inittab, /usr/lib/systemd/system/rescue.service]
-  
-- list: critical_dir
-  items: [/boot, /bin, /etc, /lib, /sbin, /usr, ~/.local/share/Trash, ~/.local/share/Trash/files]
-  
-- list: recovery_proc_args
-  items: ["disable systemd-backlight@.service", "disable apport.service", "disable rescue.service", "disable emergency.service", "disable recovery-mode.service"]
-
-- rule: Disable Recovery Features
-  desc: Detects disabling system recovery features by deleting or disabling services and commands.
-  condition: >
-      (spawned_process) and 
-      ((proc.name = "chattr" and proc.args contains "+i") or
-      (proc.name = "mkfs.ext4" and proc.args contains "-E nodiscard") or
-      (proc.name = "mount" and proc.args contains "remount,ro") or
-      (proc.name = "systemctl" and proc.args in (recovery_proc_args)) or
-      (open_write and fd.name in (recovery_files)) or
-      (remove and (fd.name pmatch (critical_dir))))
-  enabled: true
-  output: command related to Disabling recovery features so that system becomes non recoverable in case of failure is executed .(user=%user.name user_loginuid=%user.loginuid
-    command=%proc.cmdline pid=%proc.pid file=%fd.name parent=%proc.pname pcmdline=%proc.pcmdline container_id=%container.id image=%container.image.repository)"
-  priority: CRITICAL
-  tags: [host, container, recovery, mitre_impact, inhibit_system_recovery, T1490]
-
-  
-#The above Falco rule set detects attempts to enumerate domain trusts in Linux systems using specific commands, such as ldapsearch, net, and rpcclient.
-#The process name is one of the commands listed in the domain_trust_commands list OR
-#The process command-line contains the string ldapsearch OR
-#The process command-line contains the string net OR
-#The process command-line contains the string rpcclient
-#https://attack.mitre.org/techniques/T1482/
-#Mitre Discovery: domain trust discovery subscenario
-
-- list: domain_trust_commands
-  items: [ldapsearch, net, rpcclient]
-  
-- rule: Enumerate Domain Trusts
-  desc: Detects attempts to enumerate domain trusts in Linux systems
-  condition: >
-    (proc.name in (domain_trust_commands) or
-    proc.cmdline contains "ldapsearch" or
-    proc.cmdline contains "net" or
-    proc.cmdline contains "rpcclient")
-  enabled: true
-  output: >
-    Domain trust enumeration attempt detected (user=%user.name command=%proc.cmdline)
-  priority: WARNING
-  tags: [host, container, mitre_discovery, domain_trust_discovery, T1482]
-
-#This Falco rule is designed to detect the execution of commands via commonly used utilities such as awk, sed, grep, Python, 
-#Perl, Bash, cron, systemd-timer, and atd on a Linux system. 
-#The rule checks for the execve event type and then looks for the presence of these utilities either in the proc.name field or in the proc.cmdline field. 
-#https://attack.mitre.org/techniques/T1202/
-#Mitre Defense Evasion: indirect command execution subscenario
-
-- list: other_utilities
-  items: [awk, sed, grep, python, perl, bash, cron, systemd-timer, atd]
-  
-- rule: Execute Command Via Utility
-  desc: Detects execution of commands via utilities commonly used to parse text, scripting languages, and system utilities
-  condition: >
-    (evt.type = execve and
-     (proc.name in (other_utilities) or
-      proc.cmdline contains awk or
-      proc.cmdline contains sed or
-      proc.cmdline contains grep or
-      proc.cmdline contains python or
-      proc.cmdline contains perl or
-      proc.cmdline contains bash or
-      proc.cmdline contains cron or
-      proc.cmdline contains systemd-timer or
-      proc.cmdline contains atd))
-  enabled: true
-  output: >
-    Command executed via utility detected (user=%user.name command=%proc.cmdline)
-  priority: WARNING
-  tags: [host, container, command, mitre_defense_evasion, indirect_command_execution, T1202]
 
 #The falco rule "Get info about open windows" is designed to detect attempts to get information 
 #about open application windows by monitoring specific commands such as "xwininfo", "wmctrl", "xprop",

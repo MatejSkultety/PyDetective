@@ -9,7 +9,7 @@
 # Detects writing to persistence-related files or directories
 - rule: Persistence File Write
   desc: Detects writing to crontab, systemd, or autorun locations
-  condition: (evt.type = "open" and (fd.name contains "/etc/cron" or fd.name contains "/etc/systemd" or fd.name contains "autorun"))
+  condition: (evt.type = "open" and (fd.name contains "cron" or fd.name contains "systemd" or fd.name contains "autorun"))
   output: "Persistence file write (user=%user.name command=%proc.cmdline file=%fd.name)"
   priority: WARNING
   tags: [persistence, file, write]
@@ -21,3 +21,36 @@
   output: "Suspicious obfuscated code execution (user=%user.name command=%proc.cmdline)"
   priority: WARNING
   tags: [obfuscation, code_exec, process]
+
+# Detects reading of sensitive files like SSH keys
+- rule: Sensitive SSH Key Access
+  desc: Detects reading of private or public SSH keys
+  condition: (evt.type in (open, openat) and fd.name contains "/.ssh/id_rsa")
+  output: "Sensitive SSH key accessed (user=%user.name file=%fd.name command=%proc.cmdline)"
+  priority: WARNING
+  tags: [credential_access, ssh, file]
+
+# Detects execution of python with exec() in command line (obfuscated code)
+- rule: Python Exec Obfuscated Code
+  desc: Detects python execution with exec() in the command line
+  condition: (evt.type = execve and proc.name in ("python", "python3") and proc.cmdline contains "exec(")
+  output: "Python exec() detected in command line (user=%user.name command=%proc.cmdline)"
+  priority: NOTICE
+  tags: [obfuscation, code_exec, python]
+
+# Detects use of subprocess to modify crontab (persistence)
+- rule: Crontab Modification via Subprocess
+  desc: Detects subprocess modifying crontab (persistence technique)
+  condition: (evt.type = execve and proc.name = "crontab")
+  output: "Crontab modification detected (user=%user.name command=%proc.cmdline)"
+  priority: WARNING
+  tags: [persistence, crontab, process]
+
+# Detects outbound HTTP/HTTPS connections to suspicious domains, but ignores legitimate pip installs
+- rule: Outbound HTTP/HTTPS Connection
+  desc: Detects outbound HTTP/HTTPS connections to non-standard domains, except for legitimate pip installs
+  condition: (evt.type = connect and fd.sip != "127.0.0.1" and (fd.sport = 80 or fd.sport = 443)
+    and not (proc.name in ("python", "python3") and proc.cmdline contains "__pip-runner__.py install"))
+  output: "Outbound HTTP/HTTPS connection (user=%user.name dest=%fd.sip:%fd.sport command=%proc.cmdline)"
+  priority: NOTICE
+  tags: [network, exfiltration, process]

@@ -213,74 +213,6 @@ rule SEH__vba : AntiDebug SEH {
 		any of them
 }
 
-rule SEH__vectored : AntiDebug SEH {
-	meta:
-		weight = 1
-		Author = "naxonez"
-		reference = "https://github.com/naxonez/yaraRules/blob/master/AntiDebugging.yara"
-	strings:
-		$ = "AddVectoredExceptionHandler"
-		$ = "RemoveVectoredExceptionHandler"
-	condition:
-		any of them
-}
-
-// 20150909 - Issue #39 - Commented because of High FP rate
-/*
-rule DebuggerPattern__RDTSC : AntiDebug DebuggerPattern {
-	meta:
-		weight = 1
-		Author = "naxonez"
-		reference = "https://github.com/naxonez/yaraRules/blob/master/AntiDebugging.yara"
-	strings:
-		$ = {0F 31}
-	condition:
-		any of them
-}
-*/
-
-// 20150909 - Issue #39 - Commented because of High FP rate
-/*
-rule DebuggerPattern__CPUID : AntiDebug DebuggerPattern {
-	meta:
-		weight = 1
-		Author = "naxonez"
-		reference = "https://github.com/naxonez/yaraRules/blob/master/AntiDebugging.yara"
-	strings:
-		$ = {0F A2}
-	condition:
-		any of them
-}
-*/
-
-// 20150909 - Issue #39 - Commented because of High FP rate
-/*
-rule DebuggerPattern__SEH_Saves : AntiDebug DebuggerPattern {
-	meta:
-		weight = 1
-		Author = "naxonez"
-		reference = "https://github.com/naxonez/yaraRules/blob/master/AntiDebugging.yara"
-	strings:
-		$ = {64 ff 35 00 00 00 00}
-	condition:
-		any of them
-}
-*/
-
-// 20150909 - Issue #39 - Commented because of High FP rate
-/*
-rule DebuggerPattern__SEH_Inits : AntiDebug DebuggerPattern {
-	meta:
-		weight = 1
-		Author = "naxonez"
-		reference = "https://github.com/naxonez/yaraRules/blob/master/AntiDebugging.yara"
-	strings:
-		$ = {64 89 25 00 00 00 00}
-	condition:
-		any of them
-}
-*/
-
 rule SEH_Save : Tactic_DefensiveEvasion Technique_AntiDebugging SubTechnique_SEH
 {
     meta:
@@ -439,84 +371,6 @@ rule Check_Wine
 		any of them
 }
 
-rule vmdetect
-{
-    meta:
-        author = "nex"
-        description = "Possibly employs anti-virtualization techniques"
-
-    strings:
-        // Binary tricks
-        $vmware = {56 4D 58 68}
-        $virtualpc = {0F 3F 07 0B}
-        $ssexy = {66 0F 70 ?? ?? 66 0F DB ?? ?? ?? ?? ?? 66 0F DB ?? ?? ?? ?? ?? 66 0F EF}
-        $vmcheckdll = {45 C7 00 01}
-        $redpill = {0F 01 0D 00 00 00 00 C3}
-
-        // Random strings
-        $vmware1 = "VMXh"
-        $vmware2 = "Ven_VMware_" nocase
-        $vmware3 = "Prod_VMware_Virtual_" nocase
-        $vmware4 = "hgfs.sys" nocase
-        $vmware5 = "mhgfs.sys" nocase
-        $vmware6 = "prleth.sys" nocase
-        $vmware7 = "prlfs.sys" nocase
-        $vmware8 = "prlmouse.sys" nocase
-        $vmware9 = "prlvideo.sys" nocase
-        $vmware10 = "prl_pv32.sys" nocase
-        $vmware11 = "vpc-s3.sys" nocase
-        $vmware12 = "vmsrvc.sys" nocase
-        $vmware13 = "vmx86.sys" nocase
-        $vmware14 = "vmnet.sys" nocase
-        $vmware15 = "vmicheartbeat" nocase
-        $vmware16 = "vmicvss" nocase
-        $vmware17 = "vmicshutdown" nocase
-        $vmware18 = "vmicexchange" nocase
-        $vmware19 = "vmdebug" nocase
-        $vmware20 = "vmmouse" nocase
-        $vmware21 = "vmtools" nocase
-        $vmware22 = "VMMEMCTL" nocase
-        $vmware23 = "vmx86" nocase
-        $vmware24 = "vmware" nocase
-        $virtualpc1 = "vpcbus" nocase
-        $virtualpc2 = "vpc-s3" nocase
-        $virtualpc3 = "vpcuhub" nocase
-        $virtualpc4 = "msvmmouf" nocase
-        $xen1 = "xenevtchn" nocase
-        $xen2 = "xennet" nocase
-        $xen3 = "xennet6" nocase
-        $xen4 = "xensvc" nocase
-        $xen5 = "xenvdb" nocase
-        $xen6 = "XenVMM" nocase
-        $virtualbox1 = "VBoxHook.dll" nocase
-        $virtualbox2 = "VBoxService" nocase
-        $virtualbox3 = "VBoxTray" nocase
-        $virtualbox4 = "VBoxMouse" nocase
-        $virtualbox5 = "VBoxGuest" nocase
-        $virtualbox6 = "VBoxSF" nocase
-        $virtualbox7 = "VBoxGuestAdditions" nocase
-        $virtualbox8 = "VBOX HARDDISK"  nocase
-
-        // MAC addresses
-        $vmware_mac_1a = "00-05-69"
-        $vmware_mac_1b = "00:05:69"
-        $vmware_mac_1c = "000569"
-        $vmware_mac_2a = "00-50-56"
-        $vmware_mac_2b = "00:50:56"
-        $vmware_mac_2c = "005056"
-        $vmware_mac_3a = "00-0C-29" nocase
-        $vmware_mac_3b = "00:0C:29" nocase
-        $vmware_mac_3c = "000C29" nocase
-        $vmware_mac_4a = "00-1C-14" nocase
-        $vmware_mac_4b = "00:1C:14" nocase
-        $vmware_mac_4c = "001C14" nocase
-        $virtualbox_mac_1a = "08-00-27"
-        $virtualbox_mac_1b = "08:00:27"
-        $virtualbox_mac_1c = "080027"
-
-    condition:
-        any of them
-}
 
 rule Check_Debugger
 {
@@ -1916,151 +1770,6 @@ rule Str_Win32_Http_API
         (any of ($wininet_call_http*))
 }
 
-
-rule ldpreload
-{
-        meta:
-                author="xorseed"
-                reference= "https://stuff.rop.io/"
-	strings:
-		$a = "dlopen" nocase ascii wide
-		$b = "dlsym" nocase ascii wide
-		$c = "fopen" nocase ascii wide
-		$d = "fopen64" nocase ascii wide
-		$e = "__fxstat" nocase ascii wide
-		$f = "__fxstat64" nocase ascii wide
-		$g = "accept" nocase ascii wide
-		$h = "__lxstat" nocase ascii wide
-		$i = "__lxstat64" nocase ascii wide
-		$j = "open" nocase ascii wide
-		$k = "rmdir" nocase ascii wide
-		$l = "__xstat" nocase ascii wide
-		$m = "__xstat64" nocase ascii wide
-		$n = "unlink" nocase ascii wide
-		$o = "unlikat" nocase ascii wide
-		$p = "fdopendir" nocase ascii wide
-		$q = "opendir" nocase ascii wide
-		$r = "readdir" nocase ascii wide
-		$s = "readdir64" nocase ascii wide
-	condition:
-		($a or $b) and 5 of them
-}
-
-rule mysql_database_presence
-{
-    meta:
-        author="CYB3RMX"
-        description="This rule checks MySQL database presence"
-
-    strings:
-        $db = "MySql.Data"
-        $db1 = "MySqlCommand"
-        $db2 = "MySqlConnection"
-        $db3 = "MySqlDataReader"
-        $db4 = "MySql.Data.MySqlClient"
-
-    condition:
-        (any of ($db*))
-}
-
-/*
-    This Yara ruleset is under the GNU-GPLv2 license (http://www.gnu.org/licenses/gpl-2.0.html) and open to any user or organization, as long as you use it under this license.
-*/
-rule Big_Numbers0
-{
-	meta:
-		author = "_pusher_"
-		description = "Looks for big numbers 20:sized"
-		date = "2016-07"
-	strings:
-		$c0 = /[0-9a-fA-F]{20}/ fullword ascii
-	condition:
-		$c0
-}
-
-rule Big_Numbers1
-{
-	meta:
-		author = "_pusher_"
-		description = "Looks for big numbers 32:sized"
-		date = "2016-07"
-	strings:
-		$c0 = /[0-9a-fA-F]{32}/ fullword wide ascii
-	condition:
-		$c0
-}
-
-rule Big_Numbers2
-{
-	meta:
-		author = "_pusher_"
-		description = "Looks for big numbers 48:sized"
-		date = "2016-07"
-	strings:
-		$c0 = /[0-9a-fA-F]{48}/ fullword wide ascii
-	condition:
-		$c0
-}
-
-rule Big_Numbers3
-{
-	meta:
-		author = "_pusher_"
-		description = "Looks for big numbers 64:sized"
-		date = "2016-07"
-	strings:
-        	$c0 = /[0-9a-fA-F]{64}/ fullword wide ascii
-	condition:
-		$c0
-}
-
-rule Big_Numbers4
-{
-	meta:
-		author = "_pusher_"
-		description = "Looks for big numbers 128:sized"
-		date = "2016-08"
-	strings:
-        	$c0 = /[0-9a-fA-F]{128}/ fullword wide ascii
-	condition:
-		$c0
-}
-
-rule Big_Numbers5
-{
-	meta:
-		author = "_pusher_"
-		description = "Looks for big numbers 256:sized"
-		date = "2016-08"
-	strings:
-        	$c0 = /[0-9a-fA-F]{256}/ fullword wide ascii
-	condition:
-		$c0
-}
-
-rule Prime_Constants_char {
-	meta:
-		author = "_pusher_"
-		description = "List of primes [char]"
-		date = "2016-07"
-	strings:
-		$c0 = { 03 05 07 0B 0D 11 13 17 1D 1F 25 29 2B 2F 35 3B 3D 43 47 49 4F 53 59 61 65 67 6B 6D 71 7F 83 89 8B 95 97 9D A3 A7 AD B3 B5 BF C1 C5 C7 D3 DF E3 E5 E9 EF F1 FB }
-	condition:
-		$c0
-}
-
-rule Prime_Constants_long {
-	meta:
-		author = "_pusher_"
-		description = "List of primes [long]"
-		date = "2016-07"
-	strings:
-		$c0 = { 03 00 00 00 05 00 00 00 07 00 00 00 0B 00 00 00 0D 00 00 00 11 00 00 00 13 00 00 00 17 00 00 00 1D 00 00 00 1F 00 00 00 25 00 00 00 29 00 00 00 2B 00 00 00 2F 00 00 00 35 00 00 00 3B 00 00 00 3D 00 00 00 43 00 00 00 47 00 00 00 49 00 00 00 4F 00 00 00 53 00 00 00 59 00 00 00 61 00 00 00 65 00 00 00 67 00 00 00 6B 00 00 00 6D 00 00 00 71 00 00 00 7F 00 00 00 83 00 00 00 89 00 00 00 8B 00 00 00 95 00 00 00 97 00 00 00 9D 00 00 00 A3 00 00 00 A7 00 00 00 AD 00 00 00 B3 00 00 00 B5 00 00 00 BF 00 00 00 C1 00 00 00 C5 00 00 00 C7 00 00 00 D3 00 00 00 DF 00 00 00 E3 00 00 00 E5 00 00 00 E9 00 00 00 EF 00 00 00 F1 00 00 00 FB 00 00 00 }
-	condition:
-		$c0
-}
-
-
 rule Advapi_Hash_API {
 	meta:
 		author = "_pusher_"
@@ -2085,41 +1794,6 @@ rule Crypt32_CryptBinaryToString_API {
 		$CryptBinaryToStringA = "CryptBinaryToStringA" wide ascii
 	condition:
 		$crypt32 and ($CryptBinaryToStringA)
-}
-
-rule CRC32c_poly_Constant {
-	meta:
-		author = "_pusher_"
-		description = "Look for CRC32c (Castagnoli) [poly]"
-		date = "2016-08"
-	strings:
-		$c0 = { 783BF682 }
-	condition:
-		$c0
-}
-
-rule CRC32_poly_Constant {
-	meta:
-		author = "_pusher_"
-		description = "Look for CRC32 [poly]"
-		date = "2015-05"
-		version = "0.1"
-	strings:
-		$c0 = { 2083B8ED }
-	condition:
-		$c0
-}
-
-rule CRC32_table {
-	meta:
-		author = "_pusher_"
-		description = "Look for CRC32 table"
-		date = "2015-05"
-		version = "0.1"
-	strings:
-		$c0 = { 00 00 00 00 96 30 07 77 2C 61 0E EE BA 51 09 99 19 C4 6D 07 }
-	condition:
-		$c0
 }
 
 rule CRC32_table_lookup {
@@ -3190,18 +2864,6 @@ rule pkcs8_private_key_information_syntax_standard
 }
 */
 
-rule BASE64_table {
-	meta:
-		author = "_pusher_"
-		description = "Look for Base64 table"
-		date = "2015-07"
-		version = "0.1"
-	strings:
-		$c0 = { 41 42 43 44 45 46 47 48 49 4A 4B 4C 4D 4E 4F 50 51 52 53 54 55 56 57 58 59 5A 61 62 63 64 65 66 67 68 69 6A 6B 6C 6D 6E 6F 70 71 72 73 74 75 76 77 78 79 7A 30 31 32 33 34 35 36 37 38 39 2B 2F }
-	condition:
-		$c0
-}
-
 rule Delphi_Random {
 	meta:
 		author = "_pusher_"
@@ -3527,21 +3189,6 @@ rule SHA3_interleaved {
 		$c21 = { 0100000081000080 }
 	condition:
 		10 of them
-}
-
-rule SipHash_big_endian_constants {
-    meta:
-		author = "spelissier"
-		description = "Look for SipHash constants in big endian"
-		date = "2020-07"
-		reference = "https://131002.net/siphash/siphash.pdf#page=6"
-	strings:
-		$c0 = "uespemos"
-		$c1 = "modnarod"
-		$c2 = "arenegyl"
-		$c3 = "setybdet"
-	condition:
-		2 of them
 }
 /*
     This Yara ruleset is under the GNU-GPLv2 license (http://www.gnu.org/licenses/gpl-2.0.html) and open to any user or organization, as    long as you use it under this license.
@@ -6392,31 +6039,6 @@ rule suspicious_creator : PDF raw
 		$magic in (0..1024) and $header and 1 of ($creator*)
 }
 
-rule possible_exploit : PDF raw
-{
-	meta:
-		author = "Glenn Edwards (@hiddenillusion)"
-		version = "0.1"
-		weight = 3
-		
-	strings:
-		$magic = { 25 50 44 46 }
-		
-		$attrib0 = /\/JavaScript /
-		$attrib3 = /\/ASCIIHexDecode/
-		$attrib4 = /\/ASCII85Decode/
-
-		$action0 = /\/Action/
-		$action1 = "Array"
-		$shell = "A"
-		$cond0 = "unescape"
-		$cond1 = "String.fromCharCode"
-		
-		$nop = "%u9090%u9090"
-	condition:
-		$magic in (0..1024) and (2 of ($attrib*)) or ($action0 and #shell > 10 and 1 of ($cond*)) or ($action1 and $cond0 and $nop)
-}
-
 rule shellcode_blob_metadata : PDF raw
 {
         meta:
@@ -6758,13 +6380,6 @@ condition:
 $a
 }
 
-rule powershell {
-strings:
-$a = "powershell" nocase
-condition:
-$a
-}
-
 /*
     This Yara ruleset is under the GNU-GPLv2 license (http://www.gnu.org/licenses/gpl-2.0.html) and open to any user or organization, as    long as you use it under this license.
 
@@ -6872,55 +6487,6 @@ rule maldoc_find_kernel32_base_method_3 : maldoc
     condition:
         for any i in (1..#a): (((uint8(@a[i] + 5) & 0x07) == (uint8(@a[i] + 8) & 0x07)) and (uint8(@a[i] + 8) <= 0x3F) and (((uint8(@a[i] + 8) & 0x38) >> 3) != (uint8(@a[i] + 8) & 0x07)))
 }
-
-rule maldoc_getEIP_method_1 : maldoc
-{
-    meta:
-        author = "Didier Stevens (https://DidierStevens.com)"
-    strings:
-        $a = {E8 00 00 00 00 (58|59|5A|5B|5C|5D|5E|5F)}
-    condition:
-        $a
-}
-
-rule maldoc_getEIP_method_4 : maldoc
-{
-    meta:
-        author = "Didier Stevens (https://DidierStevens.com)"
-    strings:
-        $a1 = {D9 EE D9 74 24 F4 (58|59|5A|5B|5C|5D|5E|5F)}
-        $a2 = {D9 EE 9B D9 74 24 F4 (58|59|5A|5B|5C|5D|5E|5F)}
-    condition:
-        any of them
-}
-
-// 20150909 - Issue #39 - Commented because of High FP rate
-/*
-rule maldoc_suspicious_strings : maldoc
-{
-    meta:
-        author = "Didier Stevens (https://DidierStevens.com)"
-    strings:
-        $a01 = "CloseHandle"
-        $a02 = "CreateFile"
-        $a03 = "GetProcAddr"
-        $a04 = "GetSystemDirectory"
-        $a05 = "GetTempPath"
-        $a06 = "GetWindowsDirectory"
-        $a07 = "IsBadReadPtr"
-        $a08 = "IsBadWritePtr"
-        $a09 = "LoadLibrary"
-        $a10 = "ReadFile"
-        $a11 = "SetFilePointer"
-        $a12 = "ShellExecute"
-        $a13 = "UrlDownloadToFile"
-        $a14 = "VirtualAlloc"
-        $a15 = "WinExec"
-        $a16 = "WriteFile"
-    condition:
-        any of them
-}
-*/
 
 rule mwi_document: exploitdoc maldoc
 {
@@ -11080,101 +10646,6 @@ condition:
    Reference = http://blog.airbuscybersecurity.com/post/2015/11/Newcomers-in-the-Derusbi-family
     Identifier: Derusbi Dez 2015
 */
-
-rule derusbi_kernel
-{
-
-    meta:
-        description = "Derusbi Driver version"
-        date = "2015-12-09"
-        author = "Airbus Defence and Space Cybersecurity CSIRT - Fabien Perigaud"
-
-    strings:
-        $token1 = "$$$--Hello"
-        $token2 = "Wrod--$$$"
-        $cfg = "XXXXXXXXXXXXXXX"
-        $class = ".?AVPCC_BASEMOD@@"
-        $MZ = "MZ"
-
-    condition:
-        $MZ at 0 and $token1 and $token2 and $cfg and $class
-}
-
-rule derusbi_linux
-{
-
-    meta:
-        description = "Derusbi Server Linux version"
-        date = "2015-12-09"
-        author = "Airbus Defence and Space Cybersecurity CSIRT - Fabien Perigaud"
-
-    strings:
-        $PS1 = "PS1=RK# \\u@\\h:\\w \\$"
-        $cmd = "unset LS_OPTIONS;uname -a"
-        $pname = "[diskio]"
-        $rkfile = "/tmp/.secure"
-        $ELF = "\x7fELF"
-
-    condition:
-        $ELF at 0 and $PS1 and $cmd and $pname and $rkfile
-}
-
-/*
-    Yara Rule Set
-    Author: Florian Roth
-    Date: 2015-12-15
-    Identifier: Derusbi Dez 2015
-*/
-
-rule Derusbi_Kernel_Driver_WD_UDFS
-{
-
-    meta:
-        description = "Detects Derusbi Kernel Driver"
-        author = "Florian Roth"
-        reference = "http://blog.airbuscybersecurity.com/post/2015/11/Newcomers-in-the-Derusbi-family"
-        date = "2015-12-15"
-        score = 80
-        hash1 = "1b449121300b0188ff9f6a8c399fb818d0cf53fd36cf012e6908a2665a27f016"
-        hash2 = "50174311e524b97ea5cb4f3ea571dd477d1f0eee06cd3ed73af39a15f3e6484a"
-        hash3 = "6cdb65dbfb2c236b6d149fd9836cb484d0608ea082cf5bd88edde31ad11a0d58"
-        hash4 = "e27fb16dce7fff714f4b05f2cef53e1919a34d7ec0e595f2eaa155861a213e59"
-
-    strings:
-        $x1 = "\\\\.\\pipe\\usbpcex%d" fullword wide
-        $x2 = "\\\\.\\pipe\\usbpcg%d" fullword wide
-        $x3 = "\\??\\pipe\\usbpcex%d" fullword wide
-        $x4 = "\\??\\pipe\\usbpcg%d" fullword wide
-        $x5 = "$$$--Hello" fullword ascii
-        $x6 = "Wrod--$$$" fullword ascii
-        $s1 = "\\Registry\\User\\%s\\Software\\Microsoft\\Windows\\CurrentVersion\\Internet Settings" fullword wide
-        $s2 = "Update.dll" fullword ascii
-        $s3 = "\\Registry\\Machine\\SYSTEM\\CurrentControlSet\\Control\\WMI" fullword wide
-        $s4 = "\\Driver\\nsiproxy" fullword wide
-        $s5 = "HOST: %s" fullword ascii
-
-condition:
-        uint16(0) == 0x5a4d and filesize < 800KB and (2 of ($x*) or all of ($s*))
-}
-
-rule Derusbi_Code_Signing_Cert
-{
-
-    meta:
-        description = "Detects an executable signed with a certificate also used for Derusbi Trojan - suspicious"
-        author = "Florian Roth"
-        reference = "http://blog.airbuscybersecurity.com/post/2015/11/Newcomers-in-the-Derusbi-family"
-        date = "2015-12-15"
-        score = 40
-
-   strings:
-      $s1 = "Fuqing Dawu Technology Co.,Ltd.0" fullword ascii
-      $s2 = "XL Games Co.,Ltd.0" fullword ascii
-      $s3 = "Wemade Entertainment co.,Ltd0" fullword ascii
-
-   condition:
-      uint16(0) == 0x5a4d and filesize < 800KB and 1 of them
-}
 
 rule XOR_4byte_Key
 {
@@ -34922,15 +34393,6 @@ rule fromCharCode_in_unicode {
     condition: 
         any of them and filesize < 500KB
 }
-rule function_through_object {
-    strings: 
-        $ = "['eval']"
-        $ = "['unescape']"
-        $ = "['charCodeAt']"
-        $ = "['fromCharCode']"
-    condition: 
-        any of them and filesize < 500KB
-}
 rule hex_script {
     strings:
         $ = "\\x73\\x63\\x72\\x69\\x70\\x74\\x22"
@@ -35950,35 +35412,6 @@ rule shylock :  banker
 		
 	condition:
 		3 of ($process*) or any of ($domain*)
-}
-rule spyeye : banker
-{
-	meta:
-		author = "Jean-Philippe Teissier / @Jipe_"
-		description = "SpyEye X.Y memory"
-		date = "2012-05-23" 
-		version = "1.0" 
-		filetype = "memory"
-
-	strings:
-		$spyeye = "SpyEye"
-		$a = "%BOTNAME%"
-		$b = "globplugins"
-		$c = "data_inject"
-		$d = "data_before"
-		$e = "data_after"
-		$f = "data_end"
-		$g = "bot_version"
-		$h = "bot_guid"
-		$i = "TakeBotGuid"
-		$j = "TakeGateToCollector"
-		$k = "[ERROR] : Omfg! Process is still active? Lets kill that mazafaka!"
-		$l = "[ERROR] : Update is not successfull for some reason"
-		$m = "[ERROR] : dwErr == %u"
-		$n = "GRABBED DATA"
-		
-	condition:
-		$spyeye or (any of ($a,$b,$c,$d,$e,$f,$g,$h,$i,$j,$k,$l,$m,$n))
 }
 
 rule spyeye_plugins : banker
@@ -43494,26 +42927,6 @@ rule PoetRat_Doc
         $exe = ".exe"   
     condition:
     all of them        
-}
-
-rule PoetRat_Python
-{
-    meta:
-        Author = "Nishan Maharjan"
-        Description = "A yara rule to catch PoetRat python scripts"
-        Data = "6th May 2020"
-    strings:
-
-        // Any of the strings that stand out in the files, these are for the multiple python files, not just for a single file
-        $encrptionFunction = "Affine"
-        $commands = /version|ls|cd|sysinfo|download|upload|shot|cp|mv|link|register|hid|compress|jobs|exit|tasklist|taskkill/
-        $domain = "dellgenius.hopto.org"
-        $grammer_massacre = /BADD|Bad Error Happened|/
-        $mayBePresent = /self\.DIE|THE_GUID_KEY/
-        $pipe_out = "Abibliophobia23"
-        $shot = "shot_{0}_{1}.png"
-    condition:
-        3 of them        
 }
 
 /*
@@ -55349,16 +54762,6 @@ rule HasRichSignature : PECheck
 		(for any of ($a*) : ($ in (0x0..uint32(0x3c) )))
 }
 
-rule IsSuspicious
-{
-	meta:
-		author="_pusher_"
-		date = "2016-07"
-		description="Might be PE Virus"
-	condition:
-		uint32(0x20) == 0x20202020	
-}
-
 rule IsGoLink
 {
 	meta:
@@ -55671,37 +55074,6 @@ rule QtFrameWork
     You should have received a copy of the GNU General Public License
     along with Manalyze.  If not, see <http://www.gnu.org/licenses/>.
 */
-
-rule System_Tools
-{
-    meta:
-        description = "Contains references to system / monitoring tools"
-        author = "Ivan Kwiatkowski (@JusticeRage)"
-    strings:
-        $a0 = "wireshark.exe" nocase wide ascii
-        $a1 = "ethereal.exe" nocase wide ascii
-        $a2 = "netstat.exe" nocase wide ascii
-        $a3 = /taskm(an|gr|on).exe/ nocase wide ascii
-        $a4 = /regedit(32)?.exe/ nocase wide ascii
-        $a5 = "sc.exe" nocase wide ascii
-        $a6 = "procexp.exe" nocase wide ascii
-        $a7 = "procmon.exe" nocase wide ascii
-        $a8 = "netmon.exe" nocase wide ascii
-        $a9 = "regmon.exe" nocase wide ascii
-        $a10 = "filemon.exe" nocase wide ascii
-        $a11 = "msconfig.exe" nocase wide ascii
-        $a12 = "vssadmin.exe" nocase wide ascii
-        $a13 = "bcdedit.exe" nocase wide ascii
-        $a14 = "dumpcap.exe" nocase wide ascii
-        $a15 = "tcpdump.exe" nocase wide ascii
-		$a16 = "mshta.exe" nocase wide ascii    // Used by DUBNIUM to download files
-        $a17 = "control.exe" nocase wide ascii  // Used by EquationGroup to launch DLLs
-        $a18 = "regsvr32.exe" nocase wide ascii
-        $a19 = "rundll32.exe" nocase wide ascii
-		
-    condition:
-        any of them
-}
 
 rule Browsers
 {
@@ -56219,56 +55591,6 @@ rule VM_Generic_Detection : AntiVM
         any of ($a*) or $redpill or all of ($teslacrypt*)
 }
 
-rule VMWare_Detection : AntiVM
-{
-    meta:
-        description = "Looks for VMWare presence"
-        author = "Cuckoo project"
-
-    strings:
-        $a0 = "VMXh"
-        $a1 = "vmware" nocase wide ascii
-        $vmware4 = "hgfs.sys" nocase wide ascii
-        $vmware5 = "mhgfs.sys" nocase wide ascii
-        $vmware6 = "prleth.sys" nocase wide ascii
-        $vmware7 = "prlfs.sys" nocase wide ascii
-        $vmware8 = "prlmouse.sys" nocase wide ascii
-        $vmware9 = "prlvideo.sys" nocase wide ascii
-        $vmware10 = "prl_pv32.sys" nocase wide ascii
-        $vmware11 = "vpc-s3.sys" nocase wide ascii
-        $vmware12 = "vmsrvc.sys" nocase wide ascii
-        $vmware13 = "vmx86.sys" nocase wide ascii
-        $vmware14 = "vmnet.sys" nocase wide ascii
-        $vmware15 = "vmicheartbeat" nocase wide ascii
-        $vmware16 = "vmicvss" nocase wide ascii
-        $vmware17 = "vmicshutdown" nocase wide ascii
-        $vmware18 = "vmicexchange" nocase wide ascii
-        $vmware19 = "vmdebug" nocase wide ascii
-        $vmware20 = "vmmouse" nocase wide ascii
-        $vmware21 = "vmtools" nocase wide ascii
-        $vmware22 = "VMMEMCTL" nocase wide ascii
-        $vmware23 = "vmx86" nocase wide ascii
-
-        // VMware MAC addresses
-        $vmware_mac_1a = "00-05-69" wide ascii
-        $vmware_mac_1b = "00:05:69" wide ascii
-        $vmware_mac_1c = "000569" wide ascii
-        $vmware_mac_2a = "00-50-56" wide ascii
-        $vmware_mac_2b = "00:50:56" wide ascii
-        $vmware_mac_2c = "005056" wide ascii
-        $vmware_mac_3a = "00-0C-29" nocase wide ascii
-        $vmware_mac_3b = "00:0C:29" nocase wide ascii
-        $vmware_mac_3c = "000C29" nocase wide ascii
-        $vmware_mac_4a = "00-1C-14" nocase wide ascii
-        $vmware_mac_4b = "00:1C:14" nocase wide ascii
-        $vmware_mac_4c = "001C14" nocase wide ascii
-
-        // PCI Vendor IDs, from Hacking Team's leak
-        $virtualbox_vid_1 = "VEN_15ad" nocase wide ascii
-
-    condition:
-        any of them
-}
 
 rule Sandboxie_Detection : AntiVM
 {
@@ -56359,16 +55681,6 @@ rule Parallels_Detection : AntiVM
         $parallels_vid_1 = "VEN_80EE" nocase wide ascii
     condition:
         all of them
-}
-
-rule Qemu_Detection : AntiVM
-{
-    meta:
-        description = "Looks for Qemu presence"
-    strings:
-        $a0 = "qemu" nocase wide ascii
-    condition:
-        any of them
 }
 
 rule Dropper_Strings
@@ -56941,23 +56253,6 @@ rule Base64d_PE
 		
 	condition:
 		any of them
-}
-
-rule Misc_Suspicious_Strings
-{
-    meta:
-        description = "Miscellaneous malware strings"
-        author = "Ivan Kwiatkowski (@JusticeRage)"
-    strings:
-        $a0 = "backdoor" nocase ascii wide
-        $a1 = "virus" nocase ascii wide fullword
-        $a2 = "hack" nocase ascii wide fullword
-        $a3 = "exploit" nocase ascii wide
-        $a4 = "cmd.exe" nocase ascii wide
-        $a5 = "CWSandbox" nocase wide ascii // Found in some Zeus/Citadel samples
-        $a6 = "System32\\drivers\\etc\\hosts" nocase wide ascii
-    condition:
-        any of them
 }
 
 rule BITS_CLSID
