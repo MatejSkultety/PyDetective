@@ -6,10 +6,10 @@ set -e
 VENV_DIR="venv"
 REQUIREMENTS_FILE="requirements.txt"
 PYTHON_MIN_VERSION="3.7"
-MAIN_SCRIPT="pydetective.py"
+MAIN_SCRIPT="sudo venv/bin/python3 pydetective.py <package_name>"
 
 # --- Tools to check/install ---
-APT_TOOLS=(docker.io python3 python3-pip python3-venv git curl bc)
+APT_TOOLS=(docker.io python3 python3-pip python3-venv tshark git curl bc)
 SPECIAL_TOOLS=(sysdig falco)
 
 # --- Helpers ---
@@ -89,6 +89,9 @@ function setup_virtualenv() {
     else
         log "No requirements.txt found. Skipping Python package installation."
     fi
+
+    log "Installation finished! You can run the main script with:"
+    echo "   $MAIN_SCRIPT"
 }
 
 function build_sandbox_docker_image() {
@@ -109,19 +112,6 @@ CMD tcpdump -i eth0
 EOF
 }
 
-function run_main() {
-    if [[ -f "$MAIN_SCRIPT" ]]; then
-        log "Activating virtual environment for main script..."
-        # shellcheck disable=SC1090
-        source "$VENV_DIR/bin/activate"
-        log "Running $MAIN_SCRIPT..."
-        python "$MAIN_SCRIPT"
-    else
-        log "No $MAIN_SCRIPT found. Activate the environment with:"
-        echo "  source $VENV_DIR/bin/activate"
-    fi
-}
-
 # --- Main Execution ---
 log "Installing APT packages..."
 install_apt_tools
@@ -133,8 +123,6 @@ log "Checking and installing Sysdig and Falco..."
 install_sysdig
 install_falco
 
-setup_virtualenv
 build_tcpdump_docker_image
 build_sandbox_docker_image
-
-run_main
+setup_virtualenv

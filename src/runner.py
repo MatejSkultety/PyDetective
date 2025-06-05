@@ -35,10 +35,10 @@ def analyze_package(profile: profile.Profile) -> str:
         logging.error(f"Package is detected as MALICIOUS by static analysis. Stopping the process ...")
         return static_result["verdict"]
 
-    logging.info("Building sandbox image")
+    logging.info("Building Docker images")
     if not profile.args.quiet:
-        print(f"[{time.strftime('%H:%M:%S')}] [INFO] Building sandbox image...")
-    containers.build_sandbox_image(profile.docker_client, profile.sandbox_folder_path, profile.image_tag)
+        print(f"[{time.strftime('%H:%M:%S')}] [INFO] Building Docker images...")
+    containers.build_image(profile.docker_client, profile.sandbox_folder_path, profile.image_tag)
 
     logging.info("Creating sandbox container")
     if profile.args.verbose:

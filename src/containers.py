@@ -12,11 +12,9 @@ import docker
 from . import profile
 
 
-def build_sandbox_image(client: docker.client, build_path: str, image_tag: str) -> docker.models.images.Image:
+def build_image(client: docker.client, build_path: str, image_tag: str) -> docker.models.images.Image:
     """
-    Build a Docker image for the sandbox environment.
-    The image is built from the Dockerfile located in the `src/sandbox` directory.
-    The image is tagged as "pydetective_sandbox_container".
+    Build a Docker image for the specified service from Dockerfile.
 
     Args:
         client (docker.client): The Docker client instance.
@@ -26,12 +24,12 @@ def build_sandbox_image(client: docker.client, build_path: str, image_tag: str) 
     Returns:
         docker.models.images.Image: The created Docker image.
     """
-    sandbox_image = client.images.build(
+    docker_image = client.images.build(
         path=build_path,
         tag=image_tag,
     )
-    logging.debug(f"Sandbox image built: {sandbox_image[0].tags}, {sandbox_image[0].short_id}")
-    return sandbox_image
+    logging.debug(f"Docker image built: {docker_image[0].tags}, {docker_image[0].short_id}")
+    return docker_image
 
 
 def create_docker_command(deep_analysis: bool) -> list[str]:
