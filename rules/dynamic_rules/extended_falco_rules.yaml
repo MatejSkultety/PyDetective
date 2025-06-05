@@ -1,3 +1,100 @@
+
+- macro: open_write
+  condition: (evt.type=open or evt.type=openat) and evt.is_open_write=true and fd.typechar='f' and fd.num>=0
+
+- macro: open_read
+  condition: (evt.type=open or evt.type=openat) and evt.is_open_read=true and fd.typechar='f' and fd.num>=0
+
+- macro: open_directory
+  condition: (evt.type=open or evt.type=openat) and evt.is_open_read=true and fd.typechar='d' and fd.num>=0
+
+- macro: never_true
+  condition: (evt.num=0)
+
+- macro: always_true
+  condition: (evt.num>=0)
+
+# In some cases, such as dropped system call events, information about
+# the process name may be missing. For some rules that really depend
+# on the identity of the process performing an action such as opening
+# a file, etc., we require that the process name be known.
+
+- list: sensitive_file_names
+  items: [/etc/shadow, /etc/sudoers, /etc/pam.conf, /etc/security/pwquality.conf]
+
+- list: sensitive_directory_names
+  items: [/, /etc, /etc/, /root, /root/]
+
+- macro: sensitive_files
+  condition: >
+    fd.name startswith /etc and
+    (fd.name in (sensitive_file_names)
+     or fd.directory in (/etc/sudoers.d, /etc/pam.d))
+
+- macro: proc_name_exists
+  condition: (proc.name!="<NA>")
+
+- macro: rename
+  condition: evt.type in (rename, renameat)
+- macro: mkdir
+  condition: evt.type in (mkdir, mkdirat)
+- macro: remove
+  condition: evt.type in (rmdir, unlink, unlinkat)
+
+- macro: modify
+  condition: rename or remove
+
+- macro: spawned_process
+  condition: evt.type = execve and evt.dir=<
+
+- macro: create_symlink
+  condition: evt.type in (symlink, symlinkat) and evt.dir=<
+
+- macro: chmod
+  condition: (evt.type in (chmod, fchmod, fchmodat) and evt.dir=<)
+
+# File categories
+- macro: bin_dir
+  condition: fd.directory in (/bin, /sbin, /usr/bin, /usr/sbin)
+
+- macro: bin_dir_mkdir
+  condition: >
+    (evt.arg[1] startswith /bin/ or
+     evt.arg[1] startswith /sbin/ or
+     evt.arg[1] startswith /usr/bin/ or
+     evt.arg[1] startswith /usr/sbin/)
+
+- macro: bin_dir_rename
+  condition: >
+    evt.arg[1] startswith /bin/ or
+    evt.arg[1] startswith /sbin/ or
+    evt.arg[1] startswith /usr/bin/ or
+    evt.arg[1] startswith /usr/sbin/
+
+- macro: etc_dir
+  condition: fd.name startswith /etc/
+
+# This detects writes immediately below / or any write anywhere below /root
+- macro: root_dir
+  condition: ((fd.directory=/ or fd.name startswith /root) and fd.name contains "/")
+
+- list: shell_binaries
+  items: [ash, bash, csh, ksh, sh, tcsh, zsh, dash]
+
+- list: ssh_binaries
+  items: [
+    sshd, sftp-server, ssh-agent,
+    ssh, scp, sftp,
+    ssh-keygen, ssh-keysign, ssh-keyscan, ssh-add
+    ]
+
+- list: shell_mgmt_binaries
+  items: [add-shell, remove-shell]
+
+- macro: shell_procs
+  condition: proc.name in (shell_binaries)
+- 
+
 - list: ssh_files
   items: [/etc/ssh/sshd_config, /.ssh/authorized_keys]
   
@@ -21,32 +118,6 @@
   priority: ERROR
   tags: [host, container, account, mitre_discovery, account_manipulation, T1098]
 
-#This is a Falco rule that is designed to detect archive and compression activity using popular tools like tar, zip, gzip, and bzip2.
-#The rule looks for instances where these commands are being used to create or extract compressed archives.
-#If the process name is "zip" and the event direction is "<", indicating that files are being added to a zip archive.
-#If the process name is "tar" and the second argument is set to either "-czf" or "-cpf", indicating that files are being compressed and added to a tar archive.
-#If the process name is "gzip" and the event direction is "<", indicating that files are being compressed with gzip.
-#If the process name is "bzip2" and the event direction is "<", indicating that files are being compressed with bzip2.
-#https://attack.mitre.org/techniques/T1560/
-#Mitre collection: Archive collected data subscenario
-- list: encryption_proc
-  items: ["zip", "tar", "gzip", "bzip2"]
- 
-- rule: Archive and Compression Activity
-  desc: Detects archive and compression activity using tar, zip, gzip, and bzip2.
-  condition: >
-    spawned_process and 
-    ((proc.name in (encryption_proc)) and
-    (evt.dir = "<" or evt.arg[1] = "-czf" or evt.arg[1] = "-cpf"))
-  enabled: true
-  output: >
-    "Archive and compression activity detected (proc.cmdline=%proc.cmdline connection=%fd.name user.name=%user.name user.loginuid=%user.loginuid container.id=%container.id evt.type=%evt.type     evt.res=%evt.res proc.pid=%proc.pid proc.cwd=%proc.cwd proc.ppid=%proc.ppid proc.pcmdline=%proc.pcmdline proc.sid=%proc.sid proc.exepath=%proc.exepath user.uid=%user.uid user.loginname=%user.loginname group.gid=%group.gid group.name=%group.name container.name=%container.name image=%container.image.repository)"
-  priority: WARNING
-  tags: [host, container, data, mitre_collection, archive_collected_data, T1560]
-
-- list: unsec_file
-  items: [.bash_history]
-  
 #This is a Falco rule designed to detect attempts to access the bash history file on a Linux system. 
 #The rule will trigger an alert if it detects an "openat" system call with a file descriptor (fd) that matches the path of the bash history file.
 #The type of event must be an "openat" event, which means a file was opened using an absolute or relative path
@@ -146,26 +217,6 @@
 
 - list: data_destruction_cmd
   items: ["shred", "dd", "wipe"]
-  
-#This is a Falco rule that is designed to detect activity related to data destruction, such as file shredding or disk wiping.
-#The rule looks for instances where a specific command is executed or files with certain names are accessed.
-#The evt.type is set to execve, indicating that a process is being executed, and the name of the process matches one of the commands specified in the data_destruction_cmd list.
-#The evt.type is set to openat, indicating that a file is being accessed, and the name of the file being accessed ends with either .shred or .wipe.
-#https://attack.mitre.org/techniques/T1485/
-#Mitre Impact: data destruction for impact subscenario
-  
-- rule: Detect Data Destruction Activity
-  desc: Detects activity related to data destruction,
-   such as file shredding or disk wiping.
-  condition: >
-    (evt.type = execve and proc.name in (data_destruction_cmd)) or
-    (evt.type = openat and fd.name endswith ".shred" or
-     fd.name endswith ".wipe")
-  enabled: true
-  output: >
-    Data destruction activity detected.
-  priority: WARNING
-  tags: [host, container, filesystem, process, mitre_impact, data_destruction_for_impact, T1485]
 
 - list: device_enumeration
   items: ["lsusb", "lspci", "dmesg", "lsblk", "lshw", "hwinfo"]
@@ -195,36 +246,6 @@
     Peripheral device enumeration command detected.
   priority: WARNING
   tags: [host, container, device, hardware, mitre_discovery, peripheral_device_discovery, T1120]
-
-  
-#The SuspiciousDiskActivity rule in Falco is designed to detect suspicious disk activity on a system. 
-#The rule matches against processes that are known to be involved in activities such as wiping, overwriting or corrupting raw disk data, 
-#such as dd, shred, hdparm, fdisk, blkdiscard, wipe, badblocks, fsck, parted, and mkfs.ext4.  
-#https://attack.mitre.org/techniques/T1561/
-#Mitre Impact: disk wipe subscenario
-
-- rule: Suspicious Disk Activity
-  desc: Detects suspicious disk activity such as wiping, overwriting or corrupting raw disk data.
-  condition: (proc.name in ("dd", "shred", "hdparm", "fdisk", "blkdiscard", "wipe", "badblocks", "fsck", "parted", "mkfs.ext4"))
-  enabled: true
-  output: "Suspicious disk activity (command=%proc.cmdline) detected"
-  priority: WARNING
-  tags: [host, container, disk, mitre_impact, disk_wipe, T1561]
-
-#The falco rule "Get info about open windows" is designed to detect attempts to get information 
-#about open application windows by monitoring specific commands such as "xwininfo", "wmctrl", "xprop",
-#"xlsclients", "xdotool", "xrestop", "xwininfo", "xdpyinfo", "glxinfo", "xrandr", "xset", "xdriinfo", "xhost", "xev", "xdotool", and "xsetroot".
-#https://attack.mitre.org/techniques/T1010/
-#Mitre Discovery: application window discovery subscenario 
- 
-- rule: Get Information About Open Application Windows
-  desc: Detects attempts to get information about open application windows
-  condition: > 
-    proc.name in ("xwininfo", "wmctrl", "xprop", "xlsclients", "xdotool", "xrestop", "xwininfo", "xdpyinfo", "glxinfo", "xrandr", "xset", "xdriinfo", "xhost", "xev", "xdotool", "xsetroot")
-  enabled: true
-  output: "Get info about open windows in system detected (proc.cmdline=%proc.cmdline connection=%fd.name user.name=%user.name user.loginuid=%user.loginuid container.id=%container.id evt.type=%evt.type     evt.res=%evt.res proc.pid=%proc.pid proc.cwd=%proc.cwd proc.ppid=%proc.ppid proc.pcmdline=%proc.pcmdline proc.sid=%proc.sid proc.exepath=%proc.exepath user.uid=%user.uid user.loginname=%user.loginname group.gid=%group.gid group.name=%group.name container.name=%container.name image=%container.image.repository)"
-  priority: WARNING
-  tags: [host, container, process, mitre_discovery, application_window_discovery, T1010]
 
 #This is a Falco rule that is designed to detect when an attempt is made to read the maps file of a process.
 #The maps file is a file that provides information about the memory mappings of a process.
@@ -304,21 +325,6 @@
    and group members.
   priority: ERROR
   tags: [host, container, permission, group, mitre_discovery, permission_groups_discovery, T1069]
-
-#This Falco rule detects an attempt to inject code into a process using PTRACE.
-#The condition checks for a PTRACE event of type ptrace, with direction greater than, 
-#and with the request argument set to one of the specified values (5, 6, 11, 20, 27). 
-#Additionally, the condition checks if the process name exists and is not in the list of known ptrace processes. 
-#https://attack.mitre.org/techniques/T1055/
-#Mitre Priviledge Escalation: Process Injection
-
-- rule: Process Injection
-  desc: "This rule detects an attempt to inject code into a process using PTRACE."
-  condition: evt.type=ptrace and evt.dir=> and evt.arg.request in (5, 6, 11, 20, 27) and proc_name_exists and not known_ptrace_procs
-  enabled: true
-  output: A process is injected in to a known process binary to execute
-  priority: WARNING
-  tags: [host, container, process, mitre_priviledge_escalation, process_injection, T1055]
 
 #This Falco rule is designed to detect the execution of commands that read disk blocks. 
 #The rule starts by creating a list of commands that are known to read disk blocks, which includes dd, hdparm, readsector, and ddrescue

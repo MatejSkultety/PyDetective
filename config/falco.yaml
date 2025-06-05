@@ -142,9 +142,9 @@
 # Therefore, loaded config files *can* override values from main config file.
 # Also, nested include is not allowed, ie: included config files won't be able to include other config files.
 #
-# Like for 'rules_files', specifying a folder will load all the configs files present in it in a lexicographical order.
+# # Like for 'rules_files', specifying a folder will load all the configs files present in it in a lexicographical order.
 config_files:
-  - /etc/falco/config.d
+  - config/falco_config
 
 # [Stable] `watch_config_files`
 #
@@ -197,12 +197,12 @@ watch_config_files: true
 # in a performance penalty. We recommend carefully testing this alternative setting  
 # before deploying it in production. Read more under the `rule_matching` configuration.
 rules_files:
-  - /etc/falco/falco_rules.yaml
-  - /etc/falco/falco_rules.local.yaml
-  - /etc/falco/rules.d
+  # - /etc/falco/falco_rules.yaml
+  # - /etc/falco/falco_rules.local.yaml
+  # - /etc/falco/rules.d
+  - rules/dynamic_rules
   - rules/dynamic_rules/extended_falco_rules.yaml
   - rules/dynamic_rules/custom_falco_rules.yaml
-  - rules/dynamic_rules
 
 # [Incubating] `rules`
 #
@@ -471,6 +471,12 @@ load_plugins: []
 # applied when the corresponding plugin is enabled using the `load_plugins`
 # option.
 plugins:
+  - name: container
+    # For a summary of config option, see https://github.com/FedeDP/container_plugin?tab=readme-ov-file#configuration
+    library_path: libcontainer.so
+    init_config:
+      label_max_len: 100
+      with_size: false
   - name: k8saudit
     library_path: libk8saudit.so
     init_config: ""
