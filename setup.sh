@@ -26,6 +26,13 @@ function check_command() {
     command -v "$1" >/dev/null 2>&1
 }
 
+# --- Check if executed from project root ---
+if [[ -d "src" && -d "sandbox" && -f "setup.sh" ]];; then
+    echo -e "\033[1;31m[ERROR]\033[0m Please run this script from the root of the project directory. Try:"
+    echo -e "\033[1;32m   cd /path/to/PyDetective && ./setup.sh\033[0m"
+    exit 1
+fi
+
 function install_apt_tools() {
     sudo apt-get update
     for tool in "${APT_TOOLS[@]}"; do
@@ -55,23 +62,15 @@ function ensure_python() {
 }
 
 function install_sysdig() {
-    if ! check_command sysdig; then
-        log "Installing Sysdig..."
-        curl -s https://s3.amazonaws.com/download.draios.com/stable/install-sysdig | sudo bash
-    else
-        log "Sysdig is already installed."
-    fi
+    log "Installing Sysdig..."
+    curl -s https://s3.amazonaws.com/download.draios.com/stable/install-sysdig | sudo bash
 }
 
 function install_falco() {
-    if ! check_command falco; then
-        log "Installing Falco..."
-        curl -fsSL https://falco.org/repo/falcosecurity-packages.asc | sudo gpg --dearmor -o /usr/share/keyrings/falco-archive-keyring.gpg
-        echo "deb [signed-by=/usr/share/keyrings/falco-archive-keyring.gpg] https://download.falco.org/packages/deb stable main" | sudo tee /etc/apt/sources.list.d/falcosecurity.list
-        sudo apt-get install -y falco
-    else
-        log "Falco is already installed."
-    fi
+    log "Installing Falco..."
+    curl -fsSL https://falco.org/repo/falcosecurity-packages.asc | sudo gpg --dearmor -o /usr/share/keyrings/falco-archive-keyring.gpg
+    echo "deb [signed-by=/usr/share/keyrings/falco-archive-keyring.gpg] https://download.falco.org/packages/deb stable main" | sudo tee /etc/apt/sources.list.d/falcosecurity.list
+    sudo apt-get update && sudo apt-get install -y falco
 }
 
 function setup_virtualenv() {

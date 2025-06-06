@@ -346,7 +346,7 @@ def init_logger() -> None:
     if not os.path.isdir(logging_path):
         os.mkdir(logging_path)
     logging_format = '%(created)f; %(asctime)s; %(levelname)s; %(name)s; %(message)s'
-    logging.basicConfig(format=logging_format, filename=f"{logging_path}/pydetective.log", level=logging.DEBUG)
+    logging.basicConfig(format=logging_format, filename=f"{logging_path}/pydetective.log", level=logging.DEBUG, force=True)
     logger = logging.getLogger('__name__')
 
 
