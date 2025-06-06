@@ -4,7 +4,6 @@ import os
 import re
 import subprocess
 import time
-import pkgutil
 
 
 ARCHIVES_PATH = "/app/archives"

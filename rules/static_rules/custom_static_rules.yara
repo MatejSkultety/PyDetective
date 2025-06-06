@@ -32,21 +32,6 @@ rule Suspicious_SSH_Key_Access
         $ssh_dir and ($id_rsa or $id_ed25519) and $open_r
 }
 
-rule Suspicious_Password_File_Access
-{
-    meta:
-        description = "Detects code that accesses /etc/passwd, /etc/shadow, SAM, or other sensitive password files."
-        author = "Matej Skultety"
-        category = "credential_access"
-    strings:
-        $passwd = "/etc/passwd" nocase ascii wide
-        $shadow = "/etc/shadow" nocase ascii wide
-        $open = "open(" nocase ascii wide
-        $read = "read(" nocase ascii wide
-    condition:
-        ($passwd or $shadow) and ($open or $read)
-}
-
 rule Suspicious_DNS_Exfiltration
 {
     meta:
@@ -82,7 +67,7 @@ rule Suspicious_Persistence_Simulation
         (any of ($open, $write, $replace))
 }
 
-rule Suspicious_Obfuscated_Code_Durin_Instalation
+rule Suspicious_Obfuscated_Code_During_Instalation
 {
     meta:
         description = "Detects base64, hex, or binary-encoded code that is decoded and executed dynamically."
@@ -95,8 +80,9 @@ rule Suspicious_Obfuscated_Code_Durin_Instalation
         $compile = "compile(" nocase ascii wide
         $hex = ".fromhex(" nocase ascii wide
         $setup = "setup(" nocase ascii wide
+        $binary = "b'" nocase ascii wide
     condition:
-        ($base64 or $hex or $marshal) and ($exec or $compile) and ($setup)
+        ($base64 or $hex or $marshal or $binary) and ($exec or $compile) and ($setup)
 }
 
 rule Suspicious_System_Info_Collection
@@ -105,7 +91,6 @@ rule Suspicious_System_Info_Collection
         description = "Detects code that collects system information such as username, hostname, OS details, Python version, and environment variables."
         author = "Matej Skultety"
         category = "reconnaissance"
-        priority = "low"
     strings:
         $uname = "platform.uname" nocase ascii wide
         $getuser = "getpass.getuser" nocase ascii wide
@@ -131,19 +116,19 @@ rule Suspicious_Process_Execution
         $os_spawn = "os.spawn" nocase ascii wide
         $os_exec = "os.exec" nocase ascii wide
 
-        $cmd2 = "curl " nocase ascii wide
-        $cmd3 = "wget " nocase ascii wide
-        $cmd7 = "powershell" nocase ascii wide
-        $cmd9 = "chmod +x" nocase ascii wide
-        $cmd11 = "pip install" nocase ascii wide
-        $cmd12 = "kill " nocase ascii wide
-        $cmd13 = "useradd" nocase ascii wide
-        $cmd14 = "adduser" nocase ascii wide
-        $cmd15 = "sudo " nocase ascii wide
-        $cmd16 = "ifconfig" nocase ascii wide
-        $cmd17 = "ipconfig" nocase ascii wide
-        $cmd18 = "netstat" nocase ascii wide
-        $cmd19 = "whoami" nocase ascii wide
+        $cmd1 = "curl " nocase ascii wide
+        $cmd2 = "wget " nocase ascii wide
+        $cmd3 = "powershell" nocase ascii wide
+        $cmd4 = "chmod +x" nocase ascii wide
+        $cmd5 = "pip install" nocase ascii wide
+        $cmd6 = "kill " nocase ascii wide
+        $cmd7 = "useradd" nocase ascii wide
+        $cmd8 = "adduser" nocase ascii wide
+        $cmd9 = "sudo " nocase ascii wide
+        $cmd10 = "ifconfig" nocase ascii wide
+        $cmd11 = "ipconfig" nocase ascii wide
+        $cmd12 = "netstat" nocase ascii wide
+        $cmd13 = "whoami" nocase ascii wide
     condition:
         any of ($subprocess_popen, $subprocess_call, $subprocess_run, $os_system, $os_popen, $os_spawn, $os_exec) and
         any of ($cmd*)

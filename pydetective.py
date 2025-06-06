@@ -225,8 +225,17 @@ def load_config(filename: str) -> dict:
         sys.exit(1)
 
 
-def arg_formatter(): # TODO
-    # source : https://stackoverflow.com/questions/52605094/python-argparse-increase-space-between-parameter-and-description
+def arg_formatter() -> argparse.HelpFormatter:
+    """
+    Custom formatter for argparse to increase space between parameter and description.
+    It fixes issue with argparse formatting.
+    source : https://stackoverflow.com/questions/52605094/python-argparse-increase-space-between-parameter-and-description
+
+    Args:
+        None
+    Returns:
+        argparse.HelpFormatter: Custom formatter class for argparse.
+    """
     def formatter(prog): return argparse.HelpFormatter(
         prog, max_help_position=52)
 
@@ -318,6 +327,7 @@ def parse_requirements_file(package_arg: str) -> list[str]:
                 for line in file:
                     line = line.strip()
                     if line and not line.startswith('#'):
+                        line = line.rstrip("/")
                         packages.append(line)
         except FileNotFoundError:
             print(f"[{time.strftime('%H:%M:%S')}] [ERROR] The specified requirements file '{package_arg}' does not exist.")

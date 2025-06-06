@@ -14,6 +14,8 @@ import sys
 import tempfile
 
 
+# This script is a simulation of malicious actions that could be performed in a compromised environment.
+
 def malicious_execution():
     """
     Execute a series of malicious actions to simulate a compromised environment.
