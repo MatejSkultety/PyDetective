@@ -5,7 +5,7 @@ set -e
 # --- Configuration ---
 VENV_DIR="venv"
 REQUIREMENTS_FILE="requirements.txt"
-PYTHON_MIN_VERSION="3.7"
+PYTHON_MIN_VERSION="3.8"
 MAIN_SCRIPT="sudo venv/bin/python3 pydetective.py <package_name>"
 
 # --- Tools to check/install ---
@@ -27,10 +27,10 @@ function check_command() {
 }
 
 function install_apt_tools() {
+    sudo apt-get update
     for tool in "${APT_TOOLS[@]}"; do
         if ! dpkg -s "$tool" >/dev/null 2>&1; then
             log "Installing $tool..."
-            sudo apt-get update
             sudo apt-get install -y "$tool"
         else
             log "$tool is already installed."
@@ -68,7 +68,7 @@ function install_falco() {
         log "Installing Falco..."
         curl -fsSL https://falco.org/repo/falcosecurity-packages.asc | sudo gpg --dearmor -o /usr/share/keyrings/falco-archive-keyring.gpg
         echo "deb [signed-by=/usr/share/keyrings/falco-archive-keyring.gpg] https://download.falco.org/packages/deb stable main" | sudo tee /etc/apt/sources.list.d/falcosecurity.list
-        sudo apt-get update && sudo apt-get install -y falco
+        sudo apt-get install -y falco
     else
         log "Falco is already installed."
     fi
@@ -104,12 +104,12 @@ function build_sandbox_docker_image() {
 }
 
 function build_tcpdump_docker_image() {
-    log "Building tcpdump Docker image..."
-    docker build -t tcpdump - <<EOF
-FROM ubuntu
-RUN apt-get update && apt-get install -y tcpdump
-CMD tcpdump -i eth0
-EOF
+    if [[ -d "src/tcpdump" && -f "src/tcpdump/Dockerfile" ]]; then
+        log "Building Docker image from src/tcpdump/Dockerfile..."
+        docker build -t tcpdump:latest src/tcpdump
+    else
+        log "No src/tcpdump/Dockerfile found. Skipping Docker image build."
+    fi
 }
 
 # --- Main Execution ---

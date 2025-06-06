@@ -39,6 +39,7 @@ def analyze_package(profile: profile.Profile) -> str:
     if not profile.args.quiet:
         print(f"[{time.strftime('%H:%M:%S')}] [INFO] Building Docker images...")
     containers.build_image(profile.docker_client, profile.sandbox_folder_path, profile.image_tag)
+    containers.build_image(profile.docker_client, profile.tcpdump_path, profile.tcpdump_image_tag)
 
     logging.info("Creating sandbox container")
     if profile.args.verbose:

@@ -59,6 +59,7 @@ class Profile:
             self.deepscan_output_path = self.file_paths.get('deepscan_output_path')
             self.database_folder_path = self.file_paths.get('database_folder_path')
             self.database_path = self.file_paths.get('database_path')
+            self.tcpdump_path = self.file_paths.get('tcpdump_path')
 
             # Check if any required file path is missing
             if any(file_path is None for file_path in self.file_paths.values()):
@@ -77,6 +78,7 @@ class Profile:
             self.image_name = self.default_names.get('image_name')
             self.image_tag = self.default_names.get('image_tag')
             self.db_table = self.default_names.get('db_table_name')
+            self.tcpdump_image_tag = self.default_names.get('tcpdump_image_tag')
 
             # Check if any required container configuration is missing
             if any(container_value is None for container_value in self.default_names.values()):
