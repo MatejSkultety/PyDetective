@@ -26,12 +26,13 @@ function check_command() {
     command -v "$1" >/dev/null 2>&1
 }
 
-# --- Check if executed from project root ---
-if [[ -d "src" && -d "sandbox" && -f "setup.sh" ]];; then
-    echo -e "\033[1;31m[ERROR]\033[0m Please run this script from the root of the project directory. Try:"
-    echo -e "\033[1;32m   cd /path/to/PyDetective && ./setup.sh\033[0m"
-    exit 1
-fi
+function check_execution_location() {
+    if [[ ! -d "src" || ! -d "sandbox" || ! -f "setup.sh" ]]; then
+        echo -e "\033[1;31m[ERROR]\033[0m Please run this script from the root of the project directory. Try:"
+        echo -e "\033[1;32m   cd /path/to/PyDetective && ./setup.sh\033[0m"
+        exit 1
+    fi
+}
 
 function install_apt_tools() {
     sudo apt-get update
@@ -96,7 +97,7 @@ function setup_virtualenv() {
 function build_sandbox_docker_image() {
     if [[ -d "sandbox" && -f "sandbox/Dockerfile" ]]; then
         log "Building Docker image from sandbox/Dockerfile..."
-        docker build -t pydetective_sandbox_container:latest sandbox
+        sudo docker build -t pydetective_sandbox_container:latest sandbox
     else
         log "No sandbox/Dockerfile found. Skipping Docker image build."
     fi
@@ -105,13 +106,15 @@ function build_sandbox_docker_image() {
 function build_tcpdump_docker_image() {
     if [[ -d "src/tcpdump" && -f "src/tcpdump/Dockerfile" ]]; then
         log "Building Docker image from src/tcpdump/Dockerfile..."
-        docker build -t tcpdump:latest src/tcpdump
+        sudo docker build -t tcpdump:latest src/tcpdump
     else
         log "No src/tcpdump/Dockerfile found. Skipping Docker image build."
     fi
 }
 
 # --- Main Execution ---
+check_execution_location
+
 log "Installing APT packages..."
 install_apt_tools
 
