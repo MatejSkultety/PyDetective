@@ -36,7 +36,7 @@ file_paths:
   deepscan_output_path: /app/deepscan_result.txt
   database_folder_path: /database
   database_path: /database/pydetective.db
-  tcpdump_path: /src/tcpdump
+  tcpdump_path: src/tcpdump
 
 ignored_ips:
   - 151.101.0.223
