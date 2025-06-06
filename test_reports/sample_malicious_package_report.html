@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<style>
+.r1 {font-weight: bold}
+.r2 {color: #7f7f7f; text-decoration-color: #7f7f7f}
+.r3 {font-style: italic}
+body {
+    color: #000000;
+    background-color: #ffffff;
+}
+</style>
+</head>
+<body>
+    <pre style="font-family:Menlo,'DejaVu Sans Mono',consolas,'Courier New',monospace"><code style="font-family:inherit">╭───────────────────────────────────╮
+│ <span class="r1">PyDetective Analysis Result</span>       │
+│ <span class="r2">Package:</span> sample_malicious_package │
+│ <span class="r2">Version:</span> 0.0.1                    │
+│ <span class="r2">Timestamp:</span> 2025-06-06 15:56:59    │
+│ <span class="r2">Final Verdict:</span> <span class="r1">MALICIOUS</span>          │
+╰───────────────────────────────────╯
+<span class="r3">             Package Metadata              </span>
+               ╷                           
+ <span class="r1"> Key          </span>│<span class="r1"> Value                    </span> 
+╶──────────────┼──────────────────────────╴
+ <span class="r1"> package_name </span>│ sample_malicious_package  
+ <span class="r1"> version      </span>│ 0.0.1                     
+ <span class="r1"> author       </span>│ Matej Skultety            
+ <span class="r1"> author_email </span>│ xskultety@stuba.sk        
+ <span class="r1"> home_page    </span>│                           
+ <span class="r1"> package_url  </span>│                           
+               ╵                           
+<span class="r3">                                Evaluation Summary                                </span>
+┌──────────────┬────────────────────┬─────────────────────┬──────────────────────┐
+│<span class="r1"> Evaluation   </span>│<span class="r1"> Evaluation Verdict </span>│<span class="r1"> Low Priority Issues </span>│<span class="r1"> High Priority Issues </span>│
+├──────────────┼────────────────────┼─────────────────────┼──────────────────────┤
+│<span class="r1"> Network      </span>│ SUSPICIOUS         │          4          │          0           │
+│<span class="r1"> Syscalls     </span>│ MALICIOUS          │          8          │          15          │
+│<span class="r1"> Static       </span>│ MALICIOUS          │          2          │          9           │
+│<span class="r1"> Post_install </span>│ SAFE               │          0          │          0           │
+└──────────────┴────────────────────┴─────────────────────┴──────────────────────┘
+<span class="r3">                        Network: Issues Found                         </span>
+           ╷                                 ╷                        
+ <span class="r1"> Priority </span>│<span class="r1"> Rule                            </span>│<span class="r1"> Indicator             </span> 
+╶──────────┼─────────────────────────────────┼───────────────────────╴
+ <span class="r1"> LOW      </span>│ IP without OTX details accessed │ 185.15.59.226          
+ <span class="r1"> LOW      </span>│ IP without OTX details accessed │ 2a02:ec80:300:ed1a::3  
+ <span class="r1"> LOW      </span>│ Unexpected domain accessed      │ www.package.test       
+ <span class="r1"> LOW      </span>│ Unexpected domain accessed      │ wikipedia.com          
+           ╵                                 ╵                        
+<span class="r3">                          Syscalls: Triggered Falco Rules                          </span>
+           ╷                                      ╷                                
+ <span class="r1"> Priority </span>│<span class="r1"> Rule                                 </span>│<span class="r1"> Indicator                     </span> 
+╶──────────┼──────────────────────────────────────┼───────────────────────────────╴
+ <span class="r1"> HIGH     </span>│ Modify authentication process        │                                
+ <span class="r1"> HIGH     </span>│ Suspicious Network Utility Execution │ curl -s https://wikipedia.com  
+ <span class="r1"> HIGH     </span>│ Crontab Modification via Subprocess  │ crontab -l                     
+ <span class="r1"> HIGH     </span>│ Crontab Modification via Subprocess  │ crontab -                      
+ <span class="r1"> LOW      </span>│ Outbound HTTP/HTTPS Connection       │ curl -s https://wikipedia.com  
+ <span class="r1"> LOW      </span>│ Outbound HTTP/HTTPS Connection       │ curl -s https://wikipedia.com  
+ <span class="r1"> HIGH     </span>│ Modify authentication process        │                                
+ <span class="r1"> HIGH     </span>│ Crontab Modification via Subprocess  │ crontab -l                     
+ <span class="r1"> HIGH     </span>│ Suspicious Network Utility Execution │ curl -s https://wikipedia.com  
+ <span class="r1"> HIGH     </span>│ Crontab Modification via Subprocess  │ crontab -                      
+ <span class="r1"> LOW      </span>│ Outbound HTTP/HTTPS Connection       │ curl -s https://wikipedia.com  
+ <span class="r1"> LOW      </span>│ Outbound HTTP/HTTPS Connection       │ curl -s https://wikipedia.com  
+ <span class="r1"> HIGH     </span>│ Modify authentication process        │                                
+ <span class="r1"> HIGH     </span>│ Crontab Modification via Subprocess  │ crontab -l                     
+ <span class="r1"> HIGH     </span>│ Suspicious Network Utility Execution │ curl -s https://wikipedia.com  
+ <span class="r1"> HIGH     </span>│ Crontab Modification via Subprocess  │ crontab -                      
+ <span class="r1"> LOW      </span>│ Outbound HTTP/HTTPS Connection       │ curl -s https://wikipedia.com  
+ <span class="r1"> LOW      </span>│ Outbound HTTP/HTTPS Connection       │ curl -s https://wikipedia.com  
+ <span class="r1"> HIGH     </span>│ Crontab Modification via Subprocess  │ crontab -l                     
+ <span class="r1"> HIGH     </span>│ Suspicious Network Utility Execution │ curl -s https://wikipedia.com  
+ <span class="r1"> HIGH     </span>│ Crontab Modification via Subprocess  │ crontab -                      
+ <span class="r1"> LOW      </span>│ Outbound HTTP/HTTPS Connection       │ curl -s https://wikipedia.com  
+ <span class="r1"> LOW      </span>│ Outbound HTTP/HTTPS Connection       │ curl -s https://wikipedia.com  
+           ╵                                      ╵                                
+<span class="r3">                          Static Analysis: Triggered YARA Rules                          </span>
+           ╷                                     ╷                                       
+ <span class="r1"> Priority </span>│<span class="r1"> Rule                                </span>│<span class="r1"> Indicator                            </span> 
+╶──────────┼─────────────────────────────────────┼──────────────────────────────────────╴
+ <span class="r1"> HIGH     </span>│ Suspicious_HTTPS_Env_Exfiltration   │ sandbox/downloaded_package/extracte…  
+ <span class="r1"> HIGH     </span>│ Suspicious_SSH_Key_Access           │ sandbox/downloaded_package/extracte…  
+ <span class="r1"> LOW      </span>│ Suspicious_Persistence_Simulation   │ sandbox/downloaded_package/extracte…  
+ <span class="r1"> HIGH     </span>│ Suspicious_Obfuscated_Code_During_… │ sandbox/downloaded_package/extracte…  
+ <span class="r1"> HIGH     </span>│ Suspicious_System_Info_Collection   │ sandbox/downloaded_package/extracte…  
+ <span class="r1"> HIGH     </span>│ Suspicious_Process_Execution        │ sandbox/downloaded_package/extracte…  
+ <span class="r1"> HIGH     </span>│ Suspicious_HTTPS_Env_Exfiltration   │ sandbox/downloaded_package/extracte…  
+ <span class="r1"> HIGH     </span>│ Suspicious_SSH_Key_Access           │ sandbox/downloaded_package/extracte…  
+ <span class="r1"> LOW      </span>│ Suspicious_Persistence_Simulation   │ sandbox/downloaded_package/extracte…  
+ <span class="r1"> HIGH     </span>│ Suspicious_System_Info_Collection   │ sandbox/downloaded_package/extracte…  
+ <span class="r1"> HIGH     </span>│ Suspicious_Process_Execution        │ sandbox/downloaded_package/extracte…  
+           ╵                                     ╵                                       
+</code></pre>
+</body>
+</html>
